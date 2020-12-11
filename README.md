@@ -1,0 +1,2 @@
+# qbclient
+qBittorrent shell client

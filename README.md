@@ -12,6 +12,7 @@ or
 Available functions:
 
 1. qblogin URL LOGIN PASSWORD
+
     Login to the qBittorent server
 2. qblogout 
     Log out

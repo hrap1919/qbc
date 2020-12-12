@@ -46,7 +46,7 @@ or
 11. qbtorinfo [INFO_PROPERTY]
     
     Get the specified information of the selected torrent, or print it completely
-12. qbpropinfo [GEN_PROPERTY]
+12. qbtorprop [GEN_PROPERTY]
     
     Get the specified property of the selected torrent, or print all it's properties 
 13. qbtrackers

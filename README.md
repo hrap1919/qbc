@@ -1,5 +1,5 @@
 # qbclient
-qBittorrent shell remote client based on curl and jq binaries. It uses the last WebUI-API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
+A qBittorrent shell remote client based on curl and jq binaries. It uses the last WebUI-API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
 The file qbcient is just a collection of shell functions which may be loaded into the shell via  the "source" command:
 

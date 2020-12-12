@@ -31,7 +31,9 @@ or
     Get the value of specified prefernce property, or print all preferences
 7. qbprefset PREF_PROPERTY NEW_VALUE
     
-    Set a new value of the preference property
+    Set a new value of the preference property. If the value is a string then the quotes must be passed too. 
+    
+    Example: qbprefset web_ui_password '"new_password"'
 8. qbinfo 
     
     List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always are in the end 

@@ -23,7 +23,7 @@ or
 4. qbaddfile FILENAME
     
     Add torrent file
-5. qbaddaused FILENAME
+5. qbaddpaused FILENAME
     
     Add torrent file in the paused state
 6. qbprefget [PREF_PROPERTY]

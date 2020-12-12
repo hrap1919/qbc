@@ -376,8 +376,8 @@ function qb_add_url_paused ()
 local response=$(curl -F "urls=$1" -F "dlLimit=50000" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
 if [ $response == "Ok." ]
 then
-QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
-state=metaDL
+local QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
+local state=metaDL
 echo; echo Downloading metadata...
 while [ $state == "metaDL" ]
     do

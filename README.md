@@ -9,7 +9,7 @@ or
 
 . qbclient
 
-## Available functions:
+### Available functions:
 
 1. qblogin URL LOGIN PASSWORD
 
@@ -76,7 +76,7 @@ or
     
     Set priority of the specified file of the selected torrent, or set the priority for all it's files
     
-# Experimental functions not declared in qBittorrent WebUI API
+### Experimental functions not declared in qBittorrent WebUI API
 
 21. qb_get_torrent_file [FILE_NAME]
     

@@ -160,7 +160,7 @@ fi
 
 # Get the specified property of the selected torrent, or print all it's properties 
 #
-# Usage: qbtorinfo [GEN_PROPERTY]
+# Usage: qbpropinfo [GEN_PROPERTY]
 
 function qbtorprop ()
 {
@@ -275,7 +275,7 @@ fi
 
 # Get the info of the specified file of the selected torrent
 #
-# Usage: qbcfilestatus FILE_INDEX
+# Usage: qbcfileinfo FILE_INDEX
 # FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileinfo ()
@@ -286,7 +286,7 @@ echo No torrent is selected
 else
 if [ "x$1" == "x" ]
 then
-echo Usage: qbcfilestatus FILE_INDEX
+echo Usage: qbcfileinfo FILE_INDEX
 else
 local index=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$1"'].key')
 curl -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']'

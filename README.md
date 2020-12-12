@@ -9,7 +9,7 @@ or
 
 . qbclient
 
-Available functions:
+## Available functions:
 
 1. qblogin URL LOGIN PASSWORD
 

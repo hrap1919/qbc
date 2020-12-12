@@ -13,7 +13,7 @@ or
 
 1. qblogin URL LOGIN PASSWORD
 
-    Login to the qBittorent server
+    Log in to the qBittorent server
 2. qblogout 
     
     Log out

@@ -129,7 +129,7 @@ then
 echo No torrent is selected
 else
 local checkhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
-if [ "$QBhash" = "$checkhash" ]
+if [ "$QBhash" == "$checkhash" ]
 then
 curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true" 
 unset QBhash

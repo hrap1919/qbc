@@ -9,14 +9,16 @@
 function qblogin () { 
 if [ "x$QBurl" == "x" ]
 then
-QBcookie=$(curl -c - --header "Referer: $1" --data "username=$2&password=$3" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+local login=$(echo "$2" | jq  -rR @uri)
+local password=$(echo "$3" | jq  -rR @uri)
+QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ "x$QBcookie" == "x" ]
 then
-echo Login unsucessfull
+echo Login unsuccessfull
 else
 QBurl=$1
 QBcookie="SID=$QBcookie"
-echo Login sucessfull
+echo Login successfull
 echo QBurl: $QBurl
 echo QBcookie: $QBcookie
 fi
@@ -94,7 +96,8 @@ fi
 
 function qbprefset ()
 {
-curl -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" -d 'json={"'"$1"'":'"$2"'}'
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode 'json={"'"$1"'":'"$2"'}'
+#curl -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" -d 'json={"'"$1"'":'"$2"'}'
 }
 
 # List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end

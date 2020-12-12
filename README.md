@@ -1,5 +1,5 @@
 # qbclient
-A qBittorrent shell remote client based on curl and jq binaries. It uses the last WebUI-API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
+A qBittorrent shell remote client based on curl and jq binaries. It uses the last WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
 The file qbcient is just a collection of shell functions which may be loaded into the shell via  the "source" command:
 
@@ -75,3 +75,14 @@ Available functions:
 20. qbfileprio NEW_PRIORITY [FILE_INDEX]
     
     Set priority of the specified file of the selected torrent, or set the priority for all it's files
+    
+# Experimental functions not declared in qBittorrent WebUI API
+
+21. qb_get_torrent_file [FILE_NAME]
+    
+    Download the torrent file of the selected torrent to FILE_NAME
+    
+    See the code for a correct settings 
+22. qb_add_url_paused "URL" (use quotes!)
+    
+    Add url into the torrent client ensuring that the actual download will be paused

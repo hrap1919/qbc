@@ -34,7 +34,7 @@ or
     Set a new value of the preference property
 8. qbinfo 
     
-    List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end Usage: qbinfo
+    List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end 
 9. qbselect INDEX
     
     Select the torrent with the specified index from qbinfo (). P

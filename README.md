@@ -63,7 +63,7 @@ or
 16. qbsetlocation NEW_LOCATION
     
     Set a new location of downloaded files of the selected torrent
-17. qbsetpeers
+17. qbpeers
     
     Peers info of the selected torrent
 18. qbcontent

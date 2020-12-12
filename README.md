@@ -28,7 +28,7 @@ or
     Add torrent file in the paused state
 6. qbprefget [PREF_PROPERTY]
     
-    Get the value of specified prefernce property, or print all preferences
+    Get the value of specified preference property, or print all preferences
 7. qbprefset PREF_PROPERTY NEW_VALUE
     
     Set a new value of the preference property. If the value is a string then the quotes must be passed too. 

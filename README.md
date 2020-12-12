@@ -60,7 +60,7 @@ or
     Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
 16. qbsetlocation NEW_LOCATION
     
-    Set new location of downloaded files of the selected torrent
+    Set a new location of downloaded files of the selected torrent
 17. qbsetpeers
     
     Peers info of the selected torrent

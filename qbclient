@@ -115,14 +115,14 @@ curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 
 
 function qbselect ()
 {
-if [ "x$1" == "x" ] && [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
 if [ "x$1" != "x" ]
 then 
 QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
 fi
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
 echo Torrent with hash="$QBhash" is selected
 curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 fi

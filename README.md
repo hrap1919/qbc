@@ -17,7 +17,7 @@ or
 2. qblogout 
     
     Log out
-3. qbaddurl "URL" (use quotes!)
+3. qbaddurl 'URL' (use quotes!)
     
     Add url
 4. qbaddfile FILENAME
@@ -85,6 +85,6 @@ or
     Download the torrent file of the selected torrent to FILE_NAME
     
     See the code for a correct settings 
-22. qb_add_url_paused "URL" (use quotes!)
+22. qb_add_url_paused 'URL' (use quotes!)
     
     Add url into the torrent client ensuring that the actual download will be paused

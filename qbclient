@@ -111,14 +111,16 @@ curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 
 
 # Select the torrent with the specified index from qbinfo ()
 #
-# Usage: qbselect INDEX
+# Usage: qbselect [INDEX]
 
 function qbselect ()
 {
+if [ "x$QBhash" == "x" ]
+then
 QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
+fi
 echo Torrent with hash="$QBhash" is selected
 curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
-#fi
 }
 
 # Delete the selected torrent. The correct index from qbinfo () must be specifies.

@@ -37,9 +37,9 @@ or
 8. qbinfo 
     
     List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always are in the end 
-9. qbselect INDEX
+9. qbselect [INDEX]
     
-    Select the torrent with the specified index from qbinfo (). 
+    Select the torrent with the specified index from qbinfo (). Get a short info for the selected torrent. 
 10. qbdel INDEX
     
     Delete the selected torrent with the downloaded data. The correct index from qbinfo () must be specifies.

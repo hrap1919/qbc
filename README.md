@@ -9,6 +9,8 @@ or
 
 . qbclient
 
+Any bug reports, improvements, forks, alternative shell function systems are welcome.
+
 ### Available functions:
 
 1. qblogin URL LOGIN PASSWORD

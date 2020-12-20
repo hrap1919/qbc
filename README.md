@@ -35,7 +35,7 @@ Any bug reports, improvements, forks, alternative shell function systems are wel
     Get the value of specified preference property, or print all preferences
 7. qbprefset [-s] [-n] PREF_PROPERTY NEW_VALUE
     
-    Set a new value of the preference property. The option -s is for a silent action without any output into stdout. The option -n forces -s and also prevents a an additional check the modified value from the server
+    Set a new value of the preference property. The option -s is for a silent action without any output into stdout. The option -n forces -s and also prevents an additional check of the modified value from the server
 
 8. qbpasswd
 

@@ -23,7 +23,7 @@ jq 1.6
 
 ### Available functions:
 
-2. qblogout 
+1. qblogout 
     
     Log out not leaving the subshell
 

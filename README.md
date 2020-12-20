@@ -2,6 +2,7 @@
 A simple qBittorrent remote command-line client based on the bash, curl and jq binaries for a Linux-compatible environment (including Cygwin). It uses the last WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
 The file bin/qbcient is a bash-script which calls a bash-subshell after an authorization to the server. Usage:
+
 qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...
 
 In the subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called in in the options of the qbclient script using the bash options syntax, for example:

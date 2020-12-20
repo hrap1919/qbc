@@ -27,7 +27,7 @@ jq 1.6
     
     Log out not leaving the subshell
 
-1. qblogin [-p PASSWORD] URL USERNAME
+2. qblogin [-p PASSWORD] URL USERNAME
 
     Log in to the qBittorent server (after logging out)
 

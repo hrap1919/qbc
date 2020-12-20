@@ -16,7 +16,9 @@ Any bug reports, improvements, forks, alternative shell function systems are wel
 The code is tested on:
 
 bash 5.0.18
+
 curl 7.73.0
+
 jq 1.6
 
 ### Available functions:

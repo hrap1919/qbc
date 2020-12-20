@@ -21,6 +21,8 @@ curl 7.73.0
 
 jq 1.6
 
+qBittorrent 4.3.1
+
 ### Available functions:
 
 1. qblogout 

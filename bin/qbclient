@@ -1,0 +1,64 @@
+#!/bin/bash
+#Usage: qbclient [-p PASSWORD] URL LOGIN <bash options>
+function exit ()
+{
+if [ "x$QBurl" != "x" ]
+then
+curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
+echo Logged out
+fi
+builtin exit "$@"
+}
+declare -fx exit
+
+if [ "x$2" == "x" ]
+then
+echo Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...
+exit 127
+fi
+if [ "$1" == "-p" ]
+    then
+     password="$2"
+     shift
+     shift
+    else
+    read -rs -p "Password: " password
+    echo
+fi
+password=$(echo "$password" | jq  -rR @uri)
+login=$(echo "$2" | jq  -rR @uri)
+QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+if [ "x$QBcookie" == "x" ]
+then
+echo Fail
+else
+. $(dirname "$0")"/../lib/qbclient/qbfunctions"
+declare -fx qblogin
+declare -fx qblogout
+declare -fx qbaddurl
+declare -fx qbaddfile
+declare -fx qbaddpaused
+declare -fx qbprefget
+declare -fx qbprefset
+declare -fx qbpasswd
+declare -fx qbinfo
+declare -fx qbselect
+declare -fx qbdel
+declare -fx qbtorinfo
+declare -fx qbtorprop
+declare -fx qbtrackers
+declare -fx qbcommand
+declare -fx qbmedia
+declare -fx qbsetlocation
+declare -fx qbpeers
+declare -fx qbcontent
+declare -fx qbfileinfo
+declare -fx qbfileprio
+
+export QBcookie="SID=$QBcookie"
+export QBurl="$1"
+shift
+shift
+PROMPT_COMMAND='PS1=\$QBurl"/"\$QBhash"> ";unset PROMPT_COMMAND' /bin/bash "$@"
+curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
+fi

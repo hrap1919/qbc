@@ -1,0 +1,491 @@
+### Qbittorent shell client
+##
+##
+
+# Log in to the server
+#
+# Usage: qblogin [-p PASSWORD] URL LOGIN
+
+function qblogin () { 
+if [ "x$QBurl" == "x" ]
+then
+local password
+if [ "x$2" == "x" ]
+then
+echo Usage: qblogin [-p PASSWORD] URL USERNAME
+return 127
+fi
+if [ "$1" == "-p" ]
+    then
+     password="$2"
+     shift
+     shift
+    else
+    read -rs -p "Password: " password
+    echo
+fi
+password=$(echo "$password" | jq  -rR @uri)
+local login=$(echo "$2" | jq  -rR @uri)
+QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+if [ "x$QBcookie" == "x" ]
+then
+echo Fail
+else
+QBurl=$1
+QBcookie="SID=$QBcookie"
+echo Success
+fi
+else
+echo Already authorized
+fi
+}
+
+
+# Log out
+# Usage: qblogout
+
+function qblogout ()
+{
+if [ "x$QBurl" == "x" ]
+then
+echo Not logged in
+else 
+ curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
+unset QBurl
+unset QBcookie
+unset QBhash
+echo Logged out
+fi
+}
+
+# Add url
+#
+# Usage: qbaddurl "URL" (use quotes!)
+
+function qbaddurl ()
+{
+curl -F "urls=$1" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+}
+
+# Add torrent file
+#
+# Usage: qbaddfile FILENAME
+
+function qbaddfile ()
+{
+cp "$1" tmp.torrent
+curl -F 'torrents=@tmp.torrent' --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+rm tmp.torrent
+}
+
+# Add torrent file in the paused state
+#
+# Usage: qbaddaused FILENAME
+
+function qbaddpaused ()
+{
+cp "$1" tmp.torrent
+curl -F 'torrents=@tmp.torrent' -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+rm tmp.torrent
+}
+
+# Get the value of specified prefernce property, or print all preferences
+#
+# Usage: qbprefget [PREF_PROPERTY]
+ 
+function qbprefget ()
+{
+if [ "x$1" == "x" ]
+then
+curl -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
+else
+curl -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$1"
+fi
+}
+
+# Set a new value of the preference property
+#
+# Usage: qbprefset [-s] [-n] PREF_PROPERTY NEW_VALUE
+
+function qbprefset ()
+{
+local silent="false"
+local nocheck="false"
+local strval=""
+if  [ "$1" == "-s" ]
+    then
+     silent="true"
+     shift
+fi
+if  [ "$1" == "-n" ]
+    then
+     silent="true"
+     nocheck="true"
+     shift
+fi
+strval=$(curl -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq ".$1")
+if [ "$strval" = "null" ]
+    then
+     if [ "$silent" == "false" ]
+        then
+         echo No such option
+     fi
+    else
+     if [ "$silent" == "false" ]
+        then
+         echo Old value: "$strval"
+     fi
+     strval=${strval:0:1}
+     if [ "$strval" == '"' ]
+        then
+         strval='json='$(echo {} | jq -c --arg k "$1" --arg v "$2" '[ { "key" : $k, "value": $v } ] | from_entries ')
+        else
+         strval='json='$(echo {} | jq -c --arg k "$1" '[ { "key" : $k, "value":'"$2"' } ] | from_entries ')
+     fi
+     curl -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$strval"
+     if [ "$nocheck" == "false" ]
+        then
+         strval=$(curl -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq  ".$1")
+         echo  New value: "$strval"
+     fi
+fi
+}
+
+# Change password
+#
+# Usage: qbpasswd
+
+function qbpasswd ()
+{
+local newpasswd
+local newpasswd1
+read -rs -p "New password: " newpasswd
+echo
+read -rs -p "Retype new password: " newpasswd1
+echo
+if [ "$newpasswd" == "$newpasswd1" ] 
+    then
+     newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
+     curl -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd"
+    else
+     echo Different passwords
+fi
+}
+
+# List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
+#
+# Usage: qbinfo
+
+function qbinfo ()
+{
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
+}
+
+# Select the torrent with the specified index from qbinfo ()
+#
+# Usage: qbselect [-s] [INDEX]
+# Option -s: silent mode
+
+function qbselect ()
+{
+local silent
+if  [ "$1" == "-s" ]
+then
+silent="yes"
+shift
+else
+silent=""
+fi
+if [ "x$1" == "x" ] && [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" != "x" ]
+then
+QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
+fi
+if [ "x$silent" == "x" ]
+then
+echo Torrent with hash="$QBhash" is selected
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+fi
+fi
+}
+
+# Delete the selected torrent. The correct index from qbinfo () must be specifies.
+#
+# Usage: qbdel INDEX
+
+function qbdel ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+local checkhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
+if [ "$QBhash" == "$checkhash" ]
+then
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true" 
+unset QBhash
+else
+echo The selected hash $QBhash differ for the hash of $1
+fi
+fi
+}
+
+# Get the specified information of the selected torrent, or print it completely
+#
+# Usage: qbtorinfo [INFO_PROPERTY]
+
+function qbtorinfo ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" = "x" ]
+then
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[]'
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r '.[].'"$1"
+fi
+fi
+}
+
+# Get the specified property of the selected torrent, or print all it's properties 
+#
+# Usage: qbpropinfo [GEN_PROPERTY]
+
+function qbtorprop ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" = "x" ]
+then
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$1"
+fi
+fi
+}
+
+# Trackers info of the selected torrent
+#
+# Usage: qbtrackers
+
+function qbtrackers ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" | jq '.[]'
+fi
+}
+
+# Pause, resume, recheck and reannounce of the selected torrent
+#
+# Usage: qbcommand COMMAND.
+# COMMAND = pause, resume, recheck, reannounce
+
+function qbcommand ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" = "x" ]
+then
+echo Usage: qbcommand COMMAND 
+echo COMMAND = pause, resume, recheck, reannounce
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash"
+fi
+fi
+}
+
+# Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+# Usage: qbmedia
+
+function qbmedia ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
+fi
+}
+
+# Set new location of downloaded files of the selected torrent
+#
+# Usage: qbsetlocation NEW_LOCATION
+
+function qbsetlocation ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" = "x" ]
+then
+echo Usage: qbsetlocation NEW_LOCATION
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$1"
+fi
+fi
+}
+
+# Peers info of the selected torrent
+#
+# Usage: qbsetpeers
+
+function qbpeers ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '.peers| to_entries | .[].value| (.progress*100 | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+" Kb/s"'
+fi
+}
+
+# List the files of the selected torrent with a short info
+#
+# Usage: qbcontent
+
+function qbcontent ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+fi
+}
+
+# Get the info of the specified file of the selected torrent
+#
+# Usage: qbcfileinfo FILE_INDEX
+# FILE_INDEX corresponds to the output of qbcontent ()
+
+function qbfileinfo ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" == "x" ]
+then
+echo Usage: qbcfileinfo FILE_INDEX
+else
+local index=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$1"'].key')
+curl -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']'
+fi
+fi
+}
+
+# Set priority of the specified file of the selected torrent, or set the priority for all it's files
+#
+# Usage: qbfileprio NEW_PRIORITY [FILE_INDEX]
+# FILE_INDEX corresponds to the output of qbcontent ()
+
+function qbfileprio ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+if [ "x$1" == "x" ]
+then
+echo Usage: qbfileprio NEW_PRIORITY [FILE_INDEX]
+else
+local index
+if [ "x$2" == "x" ]
+then
+index=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add')
+else
+index=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$2"'].key')
+fi
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1"
+fi
+fi
+}
+
+##### Experimental functions not declared in Qbittorrent WebAPI
+
+# Download torrent file of selected torrent to $1
+# The variable $local_path must be set up in the code below
+#
+# Usage: qb_get_torrent_file [FILE_NAME]
+
+function qb_get_torrent_file ()
+{
+# The $localpath is the share folder of the server. Usually it is ~/.local/share/qBittorrent
+# It must contain simlink "BT_backup"->"public"
+# Rename "BT_backup" to "public" and make such a simlink on the server side
+local local_path="/home/user/.local/share/qBittorrent"
+#
+if [ "x$QBhash" == "x" ]
+    then
+     echo No torrent is selected
+    else
+     local save_file
+     if [ "x$1" == "x" ]
+        then
+         save_path="$(qbtorinfo name).torrent"
+        else
+         save_path="$1"
+     fi
+     if [ -f "$save_path" ]
+        then
+         echo File "$save_path" already exists
+        else
+         local alternative_webui_enabled=$(qbprefget alternative_webui_enabled)
+         local alternative_webui_path=$(qbprefget alternative_webui_path)
+         qbprefset alternative_webui_path \""$local_path"\"
+         qbprefset alternative_webui_enabled true
+         curl -s --cookie $QBcookie "$QBurl/$QBhash.torrent" --output "$save_path"
+         qbprefset alternative_webui_enabled "$alternative_webui_enabled"
+         qbprefset alternative_webui_path \""$alternative_webui_path"\"
+         if [ -f "$save_path" ]
+            then
+             echo  File "$save_path" sucessfully downloaded
+            else
+             echo An error is occurred $save_file
+         fi
+      fi
+fi
+}
+
+# Add url into the torrent client ensuring that the actual download will be paused
+#
+# Usage: qb_add_url_paused "URL" (use quotes!)
+
+function qb_add_url_paused ()
+{
+local response=$(curl -F "urls=$1" -F "dlLimit=50000" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
+if [ $response == "Ok." ]
+then
+QBhash=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
+local state=metaDL
+echo; echo Downloading metadata...
+while [ $state == "metaDL" ]
+    do
+     state=$(qbtorinfo state)
+    done
+qb_get_torrent_file $QBhash.torrent > /dev/null
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true"
+curl -F 'torrents=@'"$QBhash.torrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+rm $QBhash.torrent
+echo
+else
+echo An error is occurred
+fi
+}
+
+
+

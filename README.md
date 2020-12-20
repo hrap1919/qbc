@@ -7,7 +7,7 @@ qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...
 
 In the subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
-qbclient -p 'the_password' http://localhost:8080 admin -c "qbprefset web_ui_max_auth_fail_count 10"
+qbclient -p 'the_password' http://localhost:8080 admin -c "qbprefset -n web_ui_max_auth_fail_count 10"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

@@ -73,9 +73,10 @@ curl -F "urls=$1" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
 
 function qbaddfile ()
 {
-cp "$1" tmp.torrent
-curl -F 'torrents=@tmp.torrent' --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-rm tmp.torrent
+local tmptorrent=$(mktemp)
+cp "$1" "$tmptorrent"
+curl -F 'torrents=@'"$tmptorrent" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+rm "$tmptorrent"
 }
 
 # Add torrent file in the paused state
@@ -84,9 +85,10 @@ rm tmp.torrent
 
 function qbaddpaused ()
 {
-cp "$1" tmp.torrent
-curl -F 'torrents=@tmp.torrent' -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-rm tmp.torrent
+local tmptorrent=$(mktemp)
+cp "$1" "$tmptorrent"
+curl -F 'torrents=@'"$tmptorrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+rm "$tmptorrent"
 }
 
 # Get the value of specified prefernce property, or print all preferences
@@ -341,7 +343,7 @@ fi
 
 # Peers info of the selected torrent
 #
-# Usage: qbsetpeers
+# Usage: qbpeers
 
 function qbpeers ()
 {

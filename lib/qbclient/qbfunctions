@@ -51,7 +51,7 @@ fi
 
 function qblogout ()
 {
-if [ "x$QBurl" == "x" ]
+if [ -z "$QBurl" ]
 then
 echo Not logged in
 else 

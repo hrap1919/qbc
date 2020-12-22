@@ -6,23 +6,28 @@
 #
 # Usage: qblogin [-p PASSWORD] URL LOGIN
 
-function qblogin () { 
-if [ "x$QBurl" == "x" ]
+function qblogin () {
+if [ -z "$QBurl" ]
 then
 local password
-if [ "x$2" == "x" ]
-then
-echo Usage: qblogin [-p PASSWORD] URL USERNAME
-return 127
-fi
 if [ "$1" == "-p" ]
     then
+     if [ $# -lt 4 ]
+        then
+         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN'
+         return 127
+     fi
      password="$2"
      shift
      shift
     else
-    read -rs -p "Password: " password
-    echo
+     if [ $# -lt 2 ]
+        then
+         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN'
+         return 127
+     fi
+     read -rs -p "Password: " password
+     echo
 fi
 password=$(echo "$password" | jq  -rR @uri)
 local login=$(echo "$2" | jq  -rR @uri)

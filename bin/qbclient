@@ -13,7 +13,7 @@ declare -fx exit
 
 if [ "x$2" == "x" ]
 then
-echo Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...
+echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
 exit 127
 fi
 if [ "$1" == "-p" ]

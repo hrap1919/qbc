@@ -2,7 +2,7 @@
 #Usage: qbclient [-p PASSWORD] URL LOGIN <bash options>
 function exit ()
 {
-if [ "x$QBurl" != "x" ]
+if [ ! -z "$QBurl" ]
 then
 curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
 echo Logged out
@@ -11,24 +11,29 @@ builtin exit "$@"
 }
 declare -fx exit
 
-if [ "x$2" == "x" ]
-then
-echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
-exit 127
-fi
 if [ "$1" == "-p" ]
     then
+     if [ $# -lt 4 ]
+        then
+         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
+         exit 127
+     fi
      password="$2"
      shift
      shift
     else
-    read -rs -p "Password: " password
-    echo
+     if [ $# -lt 2 ]
+        then
+         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
+         exit 127
+     fi
+     read -rs -p "Password: " password
+     echo
 fi
 password=$(echo "$password" | jq  -rR @uri)
 login=$(echo "$2" | jq  -rR @uri)
 QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
-if [ "x$QBcookie" == "x" ]
+if [ -z "$QBcookie" ]
 then
 echo Fail
 else

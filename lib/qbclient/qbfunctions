@@ -370,7 +370,7 @@ if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
-curl -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '.peers| to_entries | .[].value| (.progress*100 | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+" Kb/s"'
+curl -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 fi
 }
 

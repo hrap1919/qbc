@@ -76,9 +76,9 @@ qBittorrent 4.3.1
     COMMAND=(pause | resume | recheck | reannounce)
     
     Pause, resume, recheck and reannounce of the selected torrent
-16. qbmedia
+16. qbmedia ARG1 [ARG2]
     
-    Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+    Set  Sequential_Download property of the selected torrent to ARG1. Set First_Last_Piece_Priority property either to ARG2, or to ARG1 (if ARG2 is absent). Each of ARG1 and ARG2 must be equal to either "true" or false. Other values will cause a tooglement of the properties.
 17. qbsetlocation NEW_LOCATION
     
     Set a new location of downloaded files of the selected torrent

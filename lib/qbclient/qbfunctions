@@ -1,3 +1,4 @@
+#
 ### Qbittorent shell client
 ##
 ##
@@ -314,16 +315,29 @@ fi
 }
 
 # Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
-# Usage: qbmedia
+# Usage: qbmedia ARG1 [ARG2]
 
 function qbmedia ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
-curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
+if [ $# -lt 1 ]
+    then
+     echo 'Usage: qbmedia ARG1 [ARG2]'
+    else
+     if [ -z "$QBhash" ]
+        then
+         echo No torrent is selected
+        else
+         local se="$1"
+         local fl="$1"
+         if [ $# -gt 1 ]
+            then fl="$2"
+         fi
+         local oldval=$(curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]')
+         local oldse=$(echo "$oldval" | jq -r '.[0]')
+         local oldfl=$(echo "$oldval" | jq -r '.[1]')
+         [ "$se" == "$oldse" ] || curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
+         [ "$fl" == "$oldfl" ] || curl -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
+     fi
 fi
 }
 

@@ -32,10 +32,13 @@ if [ "$1" == "-p" ]
 fi
 password=$(echo "$password" | jq  -rR @uri)
 login=$(echo "$2" | jq  -rR @uri)
-QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+
+IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+(IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
+#$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
 then
-echo Fail
+echo Fail, Exit Code: $exitcode
 else
 . $(dirname "$0")"/../lib/qbclient/qbfunctions"
 declare -fx qblogin
@@ -60,10 +63,11 @@ declare -fx qbcontent
 declare -fx qbfileinfo
 declare -fx qbfileprio
 
-export QBcookie="SID=$QBcookie"
+export QBcookie
+#="SID=$QBcookie"
 export QBurl="$1"
 shift
 shift
-PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
+HISTFILE="~/.qbclient_history" PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
 curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
 fi

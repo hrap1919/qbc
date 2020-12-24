@@ -32,13 +32,18 @@ if [ "$1" == "-p" ]
 fi
 password=$(echo "$password" | jq  -rR @uri)
 local login=$(echo "$2" | jq  -rR @uri)
-QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
-if [ "x$QBcookie" == "x" ]
+local exitcode=""
+QBcookie=$(curl -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
+exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
+QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
+#QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+if [ -z "$QBcookie" ]
 then
-echo Fail
+echo Fail, Exit Code: $exitcode
 else
 QBurl=$1
-QBcookie="SID=$QBcookie"
+#QBcookie="SID=$QBcookie"
 echo Success
 fi
 else

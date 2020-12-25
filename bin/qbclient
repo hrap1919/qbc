@@ -68,6 +68,6 @@ export QBcookie
 export QBurl="$1"
 shift
 shift
-HISTFILE="~/.qbclient_history" PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
+HISTFILE="$HOME/.qbclient_history" PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
 curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
 fi

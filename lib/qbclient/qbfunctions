@@ -40,7 +40,15 @@ QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
 #QBcookie=$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
 then
-echo Fail, Exit Code: $exitcode
+if [ "$exitcode" == 200 ]
+then echo "Fail. Invalid username/password"
+else
+if [ "$exitcode" == 403 ]
+then echo "Fail. Your IP is banned"
+else echo "Fail. May be this is a connection problem"
+fi
+fi
+#echo Fail, Exit Code: $exitcode
 else
 QBurl=$1
 #QBcookie="SID=$QBcookie"

@@ -8,76 +8,90 @@
 # Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
 
 function qblogin () {
+if [ ! -z "$QBurl" ]
+    then
+     echo Already authorized
+     return 1
+fi
 local curlopt1
 local curlopt2
 if [ "$1" == "-k" ]
-then
-curlopt1="-k"
-curlopt2=""
-shift
-else
-if [ "$1" == "-c" ]
-then
-curlopt1="--cacert"
-curlopt2="$2"
-shift
-shift
-else
-curlopt1=""
-curlopt2=""
+    then
+     curlopt1="-k"
+     curlopt2=""
+     shift
+    else
+     if [ "$1" == "-c" ]
+        then
+         curlopt1="--cacert"
+         curlopt2="$2"
+         shift
+         shift
+        else
+         curlopt1=""
+         curlopt2=""
+     fi
 fi
+local login
+if [ "$1" == "-l" ]
+    then
+     login="$2"
+     shift
+     shift
+    else
+     login="admin"
 fi
-if [ -z "$QBurl" ]
-then
 local password
 if [ "$1" == "-p" ]
     then
-     if [ $# -lt 4 ]
-        then
-         echo 'Usage: qbclient [(-k | -c CERTFILE)] [-p PASSWORD] URL LOGIN'
-         return 127
-     fi
      password="$2"
      shift
      shift
     else
-     if [ $# -lt 2 ]
-        then
-         echo 'Usage: qbclient [(-k | -c CERTFILE)] [-p PASSWORD] URL LOGIN'
-         return 127
-     fi
-     read -rs -p "Password: " password
+     password=""
+fi
+if [ -z "$1" ]
+    then
+     echo 'Usage: qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL'
+     return 127
+fi
+if [ -z "$password" ]
+    then
+     read -rs -p "Password for $login: " password
      echo
 fi
 QBarg1=$curlopt1
 QBarg2=$curlopt2
 password=$(echo "$password" | jq  -rR @uri)
-local login=$(echo "$2" | jq  -rR @uri)
+login=$(echo "$login" | jq  -rR @uri)
 local exitcode=""
-QBcookie=$(curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+QBcookie=$(curl $curlopt1 $curlopt2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
 while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
 exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
 QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
 #QBcookie=$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
-then
-if [ "$exitcode" == 200 ]
-then echo "Fail. Invalid username/password"
-else
-if [ "$exitcode" == 403 ]
-then echo "Fail. Your IP is banned"
-else echo "Fail. May be this is a connection problem"
+    then
+     if [ "$exitcode" == 200 ]
+        then
+         echo "Fail. Invalid username/password"
+         return 126
+        else
+         if [ "$exitcode" == 403 ]
+            then
+             echo "Fail. Your IP is banned"
+             return 126
+            else
+             echo "Fail. Check URL and/or SSL certificate"
+             return 1
+         fi
+     fi
 fi
-fi
-#echo Fail, Exit Code: $exitcode
-else
 QBurl=$1
+QBarg1=$curlopt1
+QBarg2=$curlopt2
 #QBcookie="SID=$QBcookie"
 echo Success
-fi
-else
-echo Already authorized
-fi
 }
 
 
@@ -87,17 +101,25 @@ fi
 function qblogout ()
 {
 if [ -z "$QBurl" ]
-then
-echo Not logged in
-else 
- curl $QBarg1 $QBarg2 -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
-unset QBurl
-unset QBcookie
-unset QBhash
-unset QBarg1
-unset QBarg2
-echo Logged out
+    then
+     echo "Not logged in"
+     return 1
 fi
+local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+if [ "$exitcode" == 200 ]
+    then
+     unset QBurl
+     unset QBcookie
+     unset QBhash
+     unset QBarg1
+     unset QBarg2
+     echo Logged out
+     return 0
+    else
+     echo 'Logout with the following cookie did not succeed:'
+     echo "$QBcookie"
+     return 1
+    fi
 }
 
 # Add url

@@ -3,7 +3,9 @@ A simple qBittorrent remote command-line client based on the bash, curl and jq b
 
 The file bin/qbcient is a bash-script which calls a bash-subshell after an authorization to the server. Usage:
 
-qbclient [(-k | -c CERTFILE)] [-p PASSWORD] URL USERNAME [BASH_OPT1] [BASH_OPT2] ...
+qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
+
+The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". Without the option "-p" the password will be asked from stdin. The expected value for URL is either "http://host:port", or "https://host:port".
 
 In the subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
@@ -27,11 +29,11 @@ qBittorrent 4.3.1
 
 1. qblogout 
     
-    Log out not leaving the subshell
+    A proper log out not leaving the subshell
 
-2. qblogin [(-k | -c CERTFILE)] [-p PASSWORD] URL USERNAME
+2. qblogin qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
 
-    Log in to the qBittorent server (after logging out)
+    Log in to the qBittorent server (after logging out). The options are the same as for qclient.
 
 3. qbaddurl 'URL' (use quotes!)
     

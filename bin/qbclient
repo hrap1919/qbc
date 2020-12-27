@@ -1,21 +1,29 @@
 #!/bin/bash
-#Usage: qbclient [-p PASSWORD] URL LOGIN <bash options>
-function exit ()
-{
-if [ ! -z "$QBurl" ]
+#Usage: qbclient ([-k | -c CERTFILE]) [-p PASSWORD] URL LOGIN <bash options>
+if [ "$1" == "-k" ]
 then
-curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
-echo Logged out
+QBarg1="-k"
+QBarg2=""
+shift
+else
+if [ "$1" == "-c" ]
+then
+QBarg1="--cacert"
+QBarg2="$2"
+shift
+shift
+else
+QBarg1=""
+QBarg2=""
 fi
-builtin exit "$@"
-}
-declare -fx exit
-
+fi
+export QBarg1
+export QBarg2
 if [ "$1" == "-p" ]
     then
      if [ $# -lt 4 ]
         then
-         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
+         echo 'Usage: qbclient [(-k | -c CERTFILE)] [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
          exit 127
      fi
      password="$2"
@@ -24,7 +32,7 @@ if [ "$1" == "-p" ]
     else
      if [ $# -lt 2 ]
         then
-         echo 'Usage: qbclient [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
+         echo 'Usage: qbclient [(-k | -c CERTFILE)] [-p PASSWORD] URL LOGIN [BASH_OPT1] [BASH_OPT2] ...'
          exit 127
      fi
      read -rs -p "Password: " password
@@ -32,10 +40,10 @@ if [ "$1" == "-p" ]
 fi
 password=$(echo "$password" | jq  -rR @uri)
 login=$(echo "$2" | jq  -rR @uri)
-
-IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+#echo curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login"
+IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
 (IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
-#$(curl -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+#$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
 then
 if [ "$exitcode" == 200 ]
@@ -48,7 +56,17 @@ fi
 fi
 #echo Fail, Exit Code: $exitcode
 else
+function exit ()
+{
+if [ ! -z "$QBurl" ]
+then
+curl $QBarg1 $QBarg2 -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
+echo Logged out
+fi
+builtin exit "$@"
+}
 . $(dirname "$0")"/../lib/qbclient/qbfunctions"
+declare -fx exit
 declare -fx qblogin
 declare -fx qblogout
 declare -fx qbaddurl
@@ -77,5 +95,5 @@ export QBurl="$1"
 shift
 shift
 HISTFILE="$HOME/.qbclient_history" PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
-curl -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
+curl $QBarg1 $QBarg2 -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &> /dev/null
 fi

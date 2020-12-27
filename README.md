@@ -1,15 +1,15 @@
 # qbclient
 A simple qBittorrent remote command-line client based on the bash, curl and jq binaries for a Linux-compatible environment (including Cygwin and Termux). It uses the last WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
-The file bin/qbcient is a bash-script which calls a bash-subshell after an authorization to the server. Usage:
+The file bin/qbcient is a bash-script which invokes a bash-subshell after an authorization to the server. Usage:
 
 qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
 
 The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". Without the option "-p" the password will be asked from stdin. The expected value for URL is either "http://host:port", or "https://host:port".
 
-In the subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
+In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
-qbclient -p 'the_password' http://localhost:8080 admin -c "qbprefset -n web_ui_max_auth_fail_count 10"
+qbclient -p 'the_password' http://localhost:8080 -c "qbprefset -n web_ui_max_auth_fail_count 10"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

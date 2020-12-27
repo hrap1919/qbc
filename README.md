@@ -5,7 +5,7 @@ The file bin/qbcient is a bash-script which invokes a bash-subshell after an aut
 
 qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
 
-The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". Without the option "-p" the password will be asked from stdin. The expected value for URL is either "http://host:port", or "https://host:port".
+The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". Without the option "-p" the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]".
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
@@ -33,7 +33,7 @@ qBittorrent 4.3.1
 
 2. qblogin qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
 
-    Log in to the qBittorent server (after logging out). The options are the same as for qclient.
+    Log in to the qBittorent server (after logging out). The options are the same as for qbclient.
 
 3. qbaddurl 'URL' (use quotes!)
     

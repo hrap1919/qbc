@@ -97,7 +97,7 @@ qBittorrent 4.3.1
     Get the info of the specified file of the selected torrent
 21. qbfileprio NEW_PRIORITY [FILE_INDEX1] [FILE_INDEX2]
     
-    Set priority of the specified file of the selected torrent, or set the priority for the files in the interval from FILE_INDEX1 to FILE_INDEX2 (corresponding to the output of qbcontent ())
+    Set priority of all files of the selected torrent, or set the priority for the files in the interval from FILE_INDEX1 to FILE_INDEX2 (corresponding to the output of qbcontent ())
     
 #### The file lib/qbclient/qbfunctions
 

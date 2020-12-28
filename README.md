@@ -31,7 +31,7 @@ qBittorrent 4.3.1
     
     A proper log out not leaving the subshell
 
-2. qblogin qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
+2. qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
 
     Log in to the qBittorent server (after logging out). The options are the same as for qbclient.
 

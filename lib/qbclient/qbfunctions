@@ -474,23 +474,41 @@ fi
 
 function qbfileprio ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-if [ "x$1" == "x" ]
-then
-echo Usage: qbfileprio NEW_PRIORITY [FILE_INDEX]
-else
-local index
-if [ "x$2" == "x" ]
-then
-index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add')
-else
-index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$2"'].key')
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
 fi
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1"
+if [ -z "$1" ]
+    then
+     echo Usage: qbfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
+     return 127
 fi
+local index=""
+local arg3
+if [ -z "$2" ]
+    then
+     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add')
+    else
+     if [ -z $3 ]
+        then arg3="$2"
+        else arg3="$3"
+     fi
+     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | [(.['"$2"'].key|tostring)]+ [.['"$2"'+1:'"$arg3"'+1] | "|"+(.[].key|tostring)]|add')
+fi
+if [ -z "$index" ]
+    then
+     echo "Fail"
+     return 1
+fi
+local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1" 2>/dev/null)
+if [ "$exitcode" == "200" ]
+    then return 0
+    else
+     #TODO: add the exitcodes 400, 404,409
+     echo "Fail"
+     return 1
 fi
 }
 

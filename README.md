@@ -89,15 +89,15 @@ qBittorrent 4.3.1
     Peers info of the selected torrent
 19. qbcontent
     
-    List the files of the selected torrent with a short info
+    List the files of the selected torrent in the alphabetical order with a short info
 20. qbfileinfo FILE_INDEX
     
     FILE_INDEX corresponds to the output of qbcontent ()
     
     Get the info of the specified file of the selected torrent
-21. qbfileprio NEW_PRIORITY [FILE_INDEX]
+21. qbfileprio NEW_PRIORITY [FILE_INDEX1] [FILE_INDEX2]
     
-    Set priority of the specified file of the selected torrent, or set the priority for all it's files
+    Set priority of the specified file of the selected torrent, or set the priority for the files in the interval from FILE_INDEX1 to FILE_INDEX2 (corresponding to the output of qbcontent ())
     
 #### The file lib/qbclient/qbfunctions
 

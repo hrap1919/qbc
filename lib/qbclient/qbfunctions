@@ -434,16 +434,34 @@ fi
 
 # List the files of the selected torrent with a short info
 #
-# Usage: qbcontent
+# Usage: qbcontent [FILE_INDEX_1] [FILE_INDEX_2]
 
 function qbcontent ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+if [ -z "$QBhash" ]
+    then
+     echo "No torrent is selected"
+     return 1
 fi
+local arg2
+if [ -z "$1" ]
+    then 
+     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
+     (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+    else
+     if [ -z $2 ]
+        then arg2="$1"
+        else arg2="$2"
+     fi
+     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     jq 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
+     (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+fi
+
+
+
+return 0
 }
 
 # Get the info of the specified file of the selected torrent
@@ -469,7 +487,7 @@ fi
 
 # Set priority of the specified file of the selected torrent, or set the priority for all it's files
 #
-# Usage: qbfileprio NEW_PRIORITY [FILE_INDEX]
+# Usage: qbfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
 # FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileprio ()
@@ -488,14 +506,14 @@ local index=""
 local arg3
 if [ -z "$2" ]
     then
-     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add')
+     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add' 2>/dev/null)
     else
      if [ -z $3 ]
         then arg3="$2"
         else arg3="$3"
      fi
      index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
-     jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | [(.['"$2"'].key|tostring)]+ [.['"$2"'+1:'"$arg3"'+1] | "|"+(.[].key|tostring)]|add')
+     jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | [(.['"$2"'].key|tostring)]+ [.['"$2"'+1:'"$arg3"'+1] | "|"+(.[].key|tostring)]|add' 2>/dev/null)
 fi
 if [ -z "$index" ]
     then

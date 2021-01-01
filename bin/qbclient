@@ -110,6 +110,7 @@ declare -fx qbpeers
 declare -fx qbcontent
 declare -fx qbfileinfo
 declare -fx qbfileprio
+declare -fx qbpieceview
 
 export QBcookie
 export QBarg1

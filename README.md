@@ -99,6 +99,14 @@ qBittorrent 4.3.1
     
     Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
     
+22. qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
+
+    Print a fixed number of symbols showing the state of blocks of pieces of selected torrent. Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal). If the option "-n" is present then the default number equal to the number of pieces of the torrent (so block=piece). The meaning of symbols:
+    "#" - completely downloaded block
+    "+" - partially downloaded block
+    "v" - downloading block
+    "-" - not downloaded (empty) block
+    The option "-o" specifies the index of a file, whose only pieces will be shown. The option "-i" specifies the interval of files whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the symbol "."
 #### The file lib/qbclient/qbfunctions
 
 This file can be used without subshelling. Just use

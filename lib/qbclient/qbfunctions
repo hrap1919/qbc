@@ -432,6 +432,98 @@ curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?
 fi
 }
 
+
+
+#Scaled pieces state string
+#
+#Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
+function qbpieceview ()
+{
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
+fi
+local aone="$COLUMNS"
+if [ "$1" == "-n" ]
+    then
+     if [ ${2:0:1} == "-" ]
+        then
+         aone=""
+        else
+         aone="$2"
+         shift
+     fi
+     shift
+fi
+if [ "$1" == "-o" ]
+    then
+     local pi=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+     jq --arg i "$2" 'sort_by(.name)|.[($i|tonumber)].piece_range')
+     if [ -z "$aone" ]
+        then
+         curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         jq -r --argjson pi "$pi" '.[$pi|.[0]:($pi|.[1])+1]|[.[]|if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
+        else
+         curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         jq -r --argjson pi "$pi" --arg aone "$aone" '.[$pi|.[0]:($pi|.[1])+1]|
+         length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
+         [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+         reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if (.==3 and $n==0) or (.==0 and $n==2) then 1 else . end end end)|
+         if .==0 then "-" else if .==1 then "+" else if .==2 then "v" else if .==3 then "#" else "." end end end end]|add'
+     fi
+    else
+     if [ "$1" == "-i" ]
+        then
+         local arg3="$3"
+         if [ -z $arg3 ]
+            then
+             arg3="$2"
+         fi
+         pi=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+         jq -c --arg i "$2" --arg j "$arg3" 'sort_by(.name) as $inp|reduce range($i|tonumber;($j|tonumber)+1) as $n ([];.+[($inp|.[$n]).piece_range|range(.[0];.[1]+1)]|unique)')
+         if [ -z "$aone" ]
+            then
+             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             jq -r --argjson pi "$pi" '. as $inp|length as $len| [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end|
+             if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
+            else
+             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             jq -r --argjson pi "$pi" --arg aone "$aone" '. as $inp|length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|
+             [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end]|
+             [.[] as $n|(range($mult)|$n)]|
+             [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+             reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if (.==3 and $n==0) or (.==0 and $n==2) then 1 else . end end end)|
+             if .==0 then "-" else if .==1 then "+" else if .==2 then "v" else if .==3 then "#" else "." end end end end]|add'
+        fi
+        else
+         if [ -z "$aone" ]
+            then
+             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             jq -r '[.[]|
+             if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
+            else
+             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             jq -r --arg aone "$aone" 'length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
+             [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+             reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if (.==3 and $n==0) or (.==0 and $n==2) then 1 else . end end end)|
+             if .==0 then "-" else if .==1 then "+" else if .==2 then "v" else if .==3 then "#" else "." end end end end]|add'
+         fi
+     fi
+fi
+     #jq --argjson pi "$pi" '. as $inp|[range($pi|.[0];($pi|.[1])+1)]|.[]| . as $ind | $inp|.[$ind]'
+     #|.[]|. as $ind|($inp|.[$ind])]'
+
+     #jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$1"'].key'
+     #curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']
+#fi
+#curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+#jq -r --arg aone "$1" ""'[length as $len|($aone|tonumber) as $size|to_entries |[.[]|{ "a":(.key*$size/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+#reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if .==3 and $n==0 then 1 else if .==0 and $n==2 then 1 else . end end end end)|tostring]|add'
+}
+
+
+
 # List the files of the selected torrent with a short info
 #
 # Usage: qbcontent [FILE_INDEX_1] [FILE_INDEX_2]
@@ -445,7 +537,7 @@ if [ -z "$QBhash" ]
 fi
 local arg2
 if [ -z "$1" ]
-    then 
+    then
      curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
      jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
      (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
@@ -602,5 +694,17 @@ echo An error is occurred
 fi
 }
 
+#generic curl call
+function qbcurl ()
+{
+curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/$1"
+echo
+}
 
 
+#jq '[length as $len|to_entries |[.[]|{ "a":(.key*100/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+#reduce .[] as $n (4;if .==4 or (.==2 and $n!=2) then $n else if $n==1 then 1 else . end end)|tostring]|add'
+
+ #qbcurl "torrents/pieceStates?hash=$QBhash" | jq -r --arg aone "$arg" 'length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
+ #[to_entries |[.[]|{"a":(.key*$size*$mult/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
+ #reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if .==3 and $n==0 then 1 else if .==0 and $n==2 then 1 else . end end end end)|tostring]|add'

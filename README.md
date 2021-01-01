@@ -101,7 +101,7 @@ qBittorrent 4.3.1
     
 22. qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
 
-    Print a fixed number of symbols showing the state of blocks of pieces of the selected torrent. Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal). If the option "-n" is present then the default number equal to the number of pieces of the torrent (so block=piece). The meaning of symbols:
+    Print a fixed number of symbols showing the state of blocks of pieces of the selected torrent. Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal). If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). The meaning of symbols:
     
     "#" - completely downloaded block
     

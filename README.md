@@ -60,7 +60,7 @@ qBittorrent 4.3.1
     Select the torrent with the specified index from qbinfo (). Get a short info for the selected torrent. 
 10. qbdel INDEX
     
-    Delete the selected torrent with the downloaded data. The correct index from qbinfo () must be specifies.
+    Delete the selected torrent with the downloaded data. The correct index from qbinfo () must be specified.
 11. qbtorinfo [INFO_PROPERTY]
     
     Get the specified information of the selected torrent, or print it completely
@@ -103,7 +103,7 @@ qBittorrent 4.3.1
     
 22. qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
 
-    Print a fixed number of symbols showing the state of blocks of pieces of the selected torrent. Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal). If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). The meaning of symbols:
+    Print a fixed number of symbols showing the state of pieces blocks of the selected torrent. Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal). If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). The meaning of symbols:
     
     "#" - completely downloaded block
     
@@ -113,7 +113,7 @@ qBittorrent 4.3.1
     
     "-" - not downloaded (empty) block
     
-    The option "-o" specifies the index of a file, whose only pieces will be shown. The option "-i" specifies the interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the symbol ".".
+    The option "-o" specifies the index of a file, whose only pieces will be shown. The option "-i" specifies the interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".").
 #### The file lib/qbclient/qbfunctions
 
 This file can be used without subshelling. Just use

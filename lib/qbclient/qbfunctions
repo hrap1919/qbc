@@ -2,7 +2,6 @@
 ### Qbittorent shell client
 ##
 ##
-
 # Log in to the server
 #
 # Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
@@ -106,21 +105,23 @@ if [ -z "$QBurl" ]
      return 1
 fi
 local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+unset QBurl
+unset QBcookie
+unset QBhash
+unset QBarg1
+unset QBarg2
+
 if [ "$exitcode" == 200 ]
     then
-     unset QBurl
-     unset QBcookie
-     unset QBhash
-     unset QBarg1
-     unset QBarg2
      echo Logged out
      return 0
     else
-     echo 'Logout with the following cookie did not succeed:'
+     echo 'Warning: logout with the following cookie did not succeed:'
      echo "$QBcookie"
      return 1
     fi
 }
+
 
 # Add url
 #
@@ -157,21 +158,39 @@ rm "$tmptorrent"
 
 # Get the value of specified prefernce property, or print all preferences
 #
-# Usage: qbprefget [PREF_PROPERTY]
- 
+# Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
+
 function qbprefget ()
 {
-if [ "x$1" == "x" ]
-then
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
-else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$1"
+if [ "$1" == "-r" ]
+    then
+     if [ -z "$2" ] || [ $# -gt 2 ]
+        then
+         echo 'Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]'
+         return 127
+     fi
+     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
+    else
+if [ -z "$1" ]
+    then
+     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
+    else
+     local jj='{"'"$1"'":.'"$1"
+     shift
+     while [ ! -z "$1" ]
+        do
+         jj="$jj"',"'"$1"'":.'"$1"
+         shift
+     done
+     jj="$jj"'}'
+     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq "$jj"
+fi
 fi
 }
 
 # Set a new value of the preference property
 #
-# Usage: qbprefset [-s] [-n] PREF_PROPERTY NEW_VALUE
+# Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
 
 function qbprefset ()
 {
@@ -181,38 +200,64 @@ local strval=""
 if  [ "$1" == "-s" ]
     then
      silent="true"
+     nocheck="true"
      shift
 fi
 if  [ "$1" == "-n" ]
     then
-     silent="true"
      nocheck="true"
      shift
 fi
-strval=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq ".$1")
-if [ "$strval" = "null" ]
+if [ -z $1 ]
     then
-     if [ "$silent" == "false" ]
+     echo 'Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]'
+     return 127
+fi
+local pref=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+local j='{}'
+while [ ! -z "$1" ]
+    do
+     local t2=$(echo $pref| jq ".$1")
+     if [ ${t2:0:1} == '"' ]
         then
-         echo No such option
+         j=$(echo "$j" | jq -c --arg k "$1" --arg v "$2" '.+([ { "key" : $k, "value": $v } ] | from_entries)')
+        else
+         j=$(echo "$j" | jq -c --arg k "$1" '.+([ { "key" : $k, "value":'"$2"' } ] | from_entries)')
      fi
+     shift
+     shift
+    done
+local resp=''
+local jj=''
+if [ "$silent" == "false" ]
+    then
+     jj=$(echo $j | jq -r 'to_entries|"{"+([.[]|"\""+.key+"\":"+"."+.key+","]|add|.[0:length-1])+"}"')
+     echo 'Old preferences:'
+     echo $pref| jq $jj
+     echo 'New preferences:'
+     echo $j | jq
+     read -r -p 'Type "yes" to send the new preferences to the server: ' resp
+     if [ "$resp" != "yes" ]
+        then
+         echo 'Cancelled'
+         return 1
+     fi
+fi
+resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+if [ "$nocheck" == "false" ]
+    then
+     local pref=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+     echo 'Just checked preferences:'
+     echo $pref| jq $jj
     else
      if [ "$silent" == "false" ]
         then
-         echo Old value: "$strval"
-     fi
-     strval=${strval:0:1}
-     if [ "$strval" == '"' ]
-        then
-         strval='json='$(echo {} | jq -c --arg k "$1" --arg v "$2" '[ { "key" : $k, "value": $v } ] | from_entries ')
-        else
-         strval='json='$(echo {} | jq -c --arg k "$1" '[ { "key" : $k, "value":'"$2"' } ] | from_entries ')
-     fi
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$strval"
-     if [ "$nocheck" == "false" ]
-        then
-         strval=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq  ".$1")
-         echo  New value: "$strval"
+         echo 'The preferences were sent'
      fi
 fi
 }
@@ -229,12 +274,18 @@ read -rs -p "New password: " newpasswd
 echo
 read -rs -p "Retype new password: " newpasswd1
 echo
-if [ "$newpasswd" == "$newpasswd1" ] 
+if [ "$newpasswd" == "$newpasswd1" ]
     then
      newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd"
+     local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
+     if [ "$resp" != "200" ]
+        then
+         echo 'An error is occured'
+        else
+         echo 'The password was sent'
+     fi
     else
-     echo Different passwords
+     echo 'Different passwords'
 fi
 }
 
@@ -558,22 +609,26 @@ return 0
 
 # Get the info of the specified file of the selected torrent
 #
-# Usage: qbcfileinfo FILE_INDEX
+# Usage: qbcfileinfo FILE_INDEX [PROPERTY]
 # FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileinfo ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-if [ "x$1" == "x" ]
-then
-echo Usage: qbcfileinfo FILE_INDEX
-else
-local index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$1"'].key')
-curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']'
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
 fi
+if [ -z "$1" ]
+    then
+     echo 'Usage: qbcfileinfo FILE_INDEX [PROPERTY]'
+    else
+     if [ -z "$2" ]
+        then
+         curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
+        else
+         curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$2"
+     fi
 fi
 }
 

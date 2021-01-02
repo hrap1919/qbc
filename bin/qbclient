@@ -1,4 +1,31 @@
 #!/bin/bash
+function exit ()
+{
+if [ -z "$QBurl" ]
+    then
+     exitcode=0
+    else
+     local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+     if [ "$exitcode" == 200 ]
+        then
+         >&2 echo Logged out
+         exitcode=0
+        else
+         >&2 echo 'Warning: logout with the following cookie did not succeed:'
+         >&2 echo "$QBcookie"
+         exitcode=1
+    fi
+fi
+[ -z "$1" ] || exitcode="$1"
+builtin exit "$exitcode"
+}
+
+function qbreauth ()
+{
+exit 98
+}
+
+
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
 { [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && shift
 if [ "$1" == "-k" ]
@@ -46,8 +73,13 @@ if [ -z "$password" ]
 fi
 password=$(echo "$password" | jq  -rR @uri)
 login=$(echo "$login" | jq  -rR @uri)
+QBurl="$1"
+shift
 #echo curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login"
-IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+loopcode=98;
+while [ "$loopcode" == 98 ]
+do
+IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl $QBarg1 $QBarg2 -i --header "Referer: $QBurl" --data "username=$login&password=$password" "$QBurl/api/v2/auth/login" 2>/dev/null |
 (IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
 #$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
@@ -67,30 +99,9 @@ if [ -z "$QBcookie" ]
          fi
      fi
 fi
-function exit ()
-{
-if [ -z "$QBurl" ]
-    then
-     exitcode=0
-    else
-     local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
-     if [ "$exitcode" == 200 ]
-        then
-         >&2 echo Logged out
-         exitcode=0
-        else
-         >&2 echo 'Warning. Logout with the following cookie did not succeed:'
-         >&2 echo "$QBcookie"
-         exitcode=1
-    fi
-fi
-[ -z "$1" ] || exitcode="$1"
-builtin exit "$exitcode"
-}
 . $(dirname "$0")"/../lib/qbclient/qbfunctions"
 declare -fx exit
-declare -fx qblogin
-declare -fx qblogout
+declare -fx qbreauth
 declare -fx qbaddurl
 declare -fx qbaddfile
 declare -fx qbaddpaused
@@ -116,9 +127,10 @@ export QBcookie
 export QBarg1
 export QBarg2
 #="SID=$QBcookie"
-export QBurl="$1"
-shift
-HISTFILE="$HOME/.qbclient_history" PROMPT_COMMAND='PS1=\$QBurl"/"\${QBhash:0:5}"> ";unset PROMPT_COMMAND' /bin/bash "$@"
+export QBurl
+HISTFILE="$HOME/.qbclient_history" HISTCONTROL="ignoreboth:erasedups" PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "' /bin/bash "$@"
+loopcode="$?"
+done
 #We do not know if the redefined exit has been already invoked
 curl $QBarg1 $QBarg2 -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
 builtin exit 0

@@ -536,7 +536,7 @@ fi
 local aone="$COLUMNS"
 if [ "$1" == "-n" ]
     then
-     if [ ${2:0:1} == "-" ]
+     if [ "x${2:0:1}" == "x-" ]
         then
          aone=""
         else

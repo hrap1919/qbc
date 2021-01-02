@@ -404,24 +404,62 @@ fi
 
 # Pause, resume, recheck and reannounce of the selected torrent
 #
-# Usage: qbcommand COMMAND.
+# Usage: qbcommand COMMAND
 # COMMAND = pause, resume, recheck, reannounce
 
 function qbcommand ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-if [ "x$1" = "x" ]
-then
-echo Usage: qbcommand COMMAND 
-echo COMMAND = pause, resume, recheck, reannounce
-else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash"
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
 fi
+if [ -z "$1" ]
+    then
+     echo 'Usage: qbcommand COMMAND'
+     echo 'COMMAND = pause, resume, recheck, reannounce'
+     return 127
 fi
+local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+return 0
 }
+
+
+# Add peer
+#
+# Usage: qbaddpeer PEER
+
+function qbaddpeer ()
+{
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
+fi
+if [ -z "$1" ]
+    then
+     echo 'Usage: qbaddpeer PEER'
+     return 127
+fi
+local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     if [ "$resp" == 400 ]
+        then
+         echo 'The peer is not valid'
+        else
+         echo 'An error is occured'
+     fi
+     return 1
+fi
+return 0
+}
+
 
 # Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
 # Usage: qbmedia ARG1 [ARG2]
@@ -456,11 +494,11 @@ fi
 
 function qbsetlocation ()
 {
-if [ "x$QBhash" == "x" ]
+if [ -z "$QBhash"  ]
 then
 echo No torrent is selected
 else
-if [ "x$1" = "x" ]
+if [ -z "$1" ]
 then
 echo Usage: qbsetlocation NEW_LOCATION
 else

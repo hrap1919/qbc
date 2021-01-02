@@ -9,7 +9,7 @@ The option -k implies an insecure https connection. The option -c is for pointin
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
-qbclient -p 'the_password' http://localhost:8080 -c "qbprefset -n web_ui_max_auth_fail_count 10"
+qbclient -p 'the_password' http://localhost:8080 -c "qbprefset -s web_ui_max_auth_fail_count 10"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 
@@ -27,57 +27,59 @@ qBittorrent 4.3.1
 
 ### Available functions:
 
-1. qblogout 
-    
-    A proper log out not leaving the subshell
 
-2. qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
+1. qbreauth
 
-    Log in to the qBittorent server (after logging out). The options are the same as for qbclient.
+    Re-authorize to the server with the same credentials
 
-3. qbaddurl 'URL' (use quotes!)
+2. qbaddurl 'URL' (use quotes!)
     
     Add torrent by url
-4. qbaddfile FILENAME
+3. qbaddfile FILENAME
     
     Add torrent file
-5. qbaddpaused FILENAME
+4. qbaddpaused FILENAME
     
     Add torrent file in the paused state
-6. qbprefget [PREF_PROPERTY]
+5. qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
     
-    Get the value of specified preference property, or print all preferences
-7. qbprefset [-s] [-n] PREF_PROPERTY NEW_VALUE
+    Get the value of specified preference properties, or print all preferences. With the "-r" option the function returns the raw value of a property
+6. qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
     
-    Set a new value of the preference property. The option -s is for a silent action without any output into stdout. The option -n forces -s and also prevents an additional check of the modified value from the server
+    Send new values of specified  preference properties. The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages
 
-8. qbpasswd
+7. qbpasswd
 
     Set WebUI password
     
-9. qbinfo 
+8. qbinfo 
     
     List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always are in the end 
-10. qbselect [INDEX]
+9. qbselect [INDEX]
     
     Select the torrent with the specified index from qbinfo (). Get a short info for the selected torrent. 
-11. qbdel INDEX
+10. qbdel INDEX
     
     Delete the selected torrent with the downloaded data. The correct index from qbinfo () must be specifies.
-12. qbtorinfo [INFO_PROPERTY]
+11. qbtorinfo [INFO_PROPERTY]
     
     Get the specified information of the selected torrent, or print it completely
-13. qbtorprop [GEN_PROPERTY]
+12. qbtorprop [GEN_PROPERTY]
     
     Get the specified property of the selected torrent, or print all it's properties 
-14. qbtrackers
+13. qbtrackers
     
     Trackers info of the selected torrent
-15. qbcommand COMMAND  
+14. qbcommand COMMAND  
     
     COMMAND=(pause | resume | recheck | reannounce)
     
     Pause, resume, recheck and reannounce of the selected torrent
+
+15. qbaddpeer PEER
+
+    Add a peer to the selected torrent. The PEER format is host:port
+
 16. qbmedia ARG1 [ARG2]
     
     Set  Sequential_Download property of the selected torrent to ARG1. Set First_Last_Piece_Priority property either to ARG2, or to ARG1 (if ARG2 is absent). Each of ARG1 and ARG2 must be equal to either "true" or "false" Other values cause a tooglement of the properties.
@@ -122,16 +124,20 @@ or
 
 . /path/to/qbfunctions
 
-to have all these functions in the current shell.
+to have all these functions in the current shell. Use the function
+
+qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
+
+to authorize and "qblogout" to log out
 
 ### Experimental functions not declared in qBittorrent WebUI API
 
-23. qb_get_torrent_file [FILE_NAME]
+*. qb_get_torrent_file [FILE_NAME]
     
     Download the torrent file of the selected torrent to FILE_NAME
     
     See the code for a correct settings 
-24. qb_add_url_paused 'URL' (use quotes!)
+**. qb_add_url_paused 'URL' (use quotes!)
     
     Add url into the torrent client ensuring that the actual download will be paused
     

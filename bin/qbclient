@@ -115,6 +115,7 @@ declare -fx qbtorinfo
 declare -fx qbtorprop
 declare -fx qbtrackers
 declare -fx qbcommand
+declare -fx qbaddpeer
 declare -fx qbmedia
 declare -fx qbsetlocation
 declare -fx qbpeers

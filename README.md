@@ -43,7 +43,7 @@ qBittorrent 4.3.1
     Add torrent file in the paused state
 5. qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
     
-    Get the value of specified preference properties, or print all preferences. With the "-r" option the function returns the raw value of a property
+    Print specified preference properties, or print all preferences. With the "-r" option the function returns the raw value of a property
 6. qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
     
     Send new values of specified  preference properties. The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages

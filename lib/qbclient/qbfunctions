@@ -173,7 +173,8 @@ if [ "$1" == "-r" ]
          return 127
      fi
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
-    else
+     return 0
+fi
 if [ -z "$1" ]
     then
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
@@ -188,7 +189,7 @@ if [ -z "$1" ]
      jj="$jj"'}'
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq "$jj"
 fi
-fi
+return 0
 }
 
 # Set a new value of the preference property
@@ -360,42 +361,80 @@ fi
 
 # Get the specified information of the selected torrent, or print it completely
 #
-# Usage: qbtorinfo [INFO_PROPERTY]
+# Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]
 
 function qbtorinfo ()
 {
 qb_arg_array
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-if [ "x$1" = "x" ]
-then
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[]'
-else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r '.[].'"$1"
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
 fi
+if [ "$1" == "-r" ]
+    then
+     if [ -z "$2" ] || [ $# -gt 2 ]
+        then
+         echo 'Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]'
+         return 127
+     fi
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r ".[]|.$2"
+     return 0
 fi
+if [ -z "$1" ]
+    then
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq ".[]"
+    else
+     local jj='{"'"$1"'":.'"$1"
+     shift
+     while [ ! -z "$1" ]
+        do
+         jj="$jj"',"'"$1"'":.'"$1"
+         shift
+     done
+     jj="$jj"'}'
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq ".[]|$jj"
+fi
+return 0
 }
 
-# Get the specified property of the selected torrent, or print all it's properties 
+# Get the specified property of the selected torrent, or print all it's properties
 #
-# Usage: qbpropinfo [GEN_PROPERTY]
+# Usage: qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
 
 function qbtorprop ()
 {
 qb_arg_array
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-if [ "x$1" = "x" ]
-then
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
-else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$1"
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
 fi
+if [ "$1" == "-r" ]
+    then
+     if [ -z "$2" ] || [ $# -gt 2 ]
+        then
+         echo 'Usage: qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]'
+         return 127
+     fi
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$2"
+     return 0
 fi
+if [ -z "$1" ]
+    then
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
+    else
+     local jj='{"'"$1"'":.'"$1"
+     shift
+     while [ ! -z "$1" ]
+        do
+         jj="$jj"',"'"$1"'":.'"$1"
+         shift
+     done
+     jj="$jj"'}'
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq "$jj"
+fi
+return 0
 }
 
 # Trackers info of the selected torrent
@@ -665,7 +704,7 @@ return 0
 
 # Get the info of the specified file of the selected torrent
 #
-# Usage: qbcfileinfo FILE_INDEX [PROPERTY]
+# Usage: qbfileinfo FILE_INDEX [PROPERTY]
 # FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileinfo ()
@@ -673,20 +712,41 @@ function qbfileinfo ()
 qb_arg_array
 if [ -z "$QBhash" ]
     then
-     echo No torrent is selected
+     echo 'No torrent is selected'
      return 1
 fi
 if [ -z "$1" ]
     then
-     echo 'Usage: qbcfileinfo FILE_INDEX [PROPERTY]'
-    else
-     if [ -z "$2" ]
-        then
-         curl "${QBarg[@]}" -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
-        else
-         curl "${QBarg[@]}" -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$2"
-     fi
+     echo 'Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]'
+     return 127
 fi
+if [ "$2" == "-r" ]
+    then
+     if [ -z "$3" ] || [ $# -gt 3 ]
+        then
+         echo 'Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]'
+         return 127
+     fi
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$3"
+     return 0
+fi
+if [ -z "$2" ]
+    then
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
+    else
+     local j="$1"
+     shift
+     local jj='{"'"$1"'":.'"$1"
+     shift
+     while [ ! -z "$1" ]
+        do
+         jj="$jj"',"'"$1"'":.'"$1"
+         shift
+     done
+     jj="$jj"'}'
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$j"']|'"$jj"
+fi
+return 0
 }
 
 # Set priority of the specified file of the selected torrent, or set the priority for all it's files

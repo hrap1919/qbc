@@ -55,16 +55,16 @@ qBittorrent 4.3.1
 8. qbdel INDEX
     
     Delete the selected torrent with the downloaded data. The correct index from qbinfo () must be specified.
-9. qbtorinfo [INFO_PROPERTY]
+9.  qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]
     
     Get the specified information of the selected torrent, or print it completely
-10. qbtorprop [GEN_PROPERTY]
+10. qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
     
-    Get the specified property of the selected torrent, or print all it's properties 
+    Get the specified property of the selected torrent, or print all it's properties
 11. qbtrackers
     
     Trackers info of the selected torrent
-12. qbcommand COMMAND  
+12. qbcommand COMMAND
     
     COMMAND=(pause | resume | recheck | reannounce)
     
@@ -86,7 +86,7 @@ qBittorrent 4.3.1
 17. qbcontent [FILE_INDEX1] [FILE_INDEX2]
     
     Without arguments list all files of the selected torrent in the alphabetical order with a short info. If FILE_INDEX1 exists then the list starts with this index and finishes at FILE_INDEX2. If FILE_INDEX2 does not exists or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
-18. qbfileinfo FILE_INDEX
+18. qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
     
     FILE_INDEX corresponds to the output of qbcontent ()
     

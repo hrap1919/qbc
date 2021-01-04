@@ -13,7 +13,7 @@ if [ -z "$QBurl" ]
     else
      qb_arg_array
      local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
-     if [ "$exitcode" == 200 ]
+     if [ "$exitcode" == "200" ]
         then
          >&2 echo Logged out
          exitcode=0
@@ -58,7 +58,6 @@ declare -fx qbcontent
 declare -fx qbfileinfo
 declare -fx qbfileprio
 declare -fx qbpieceview
-
 
 
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>

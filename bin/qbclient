@@ -1,5 +1,5 @@
 #!/bin/bash
-function qb_arg_array ()
+function qb_arg_array_local ()
 {
 QBarg=()
 [ -z "$QBarg1" ] || QBarg=("$QBarg1")
@@ -114,7 +114,7 @@ QBhashtmp=""
 loopcode=98
 while [ "$loopcode" == 98 ]
 do
-qb_arg_array
+qb_arg_array_local
 IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$login&password=$password" "$QBurl/api/v2/auth/login" 2>/dev/null |
 (IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
 #$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)

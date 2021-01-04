@@ -6,6 +6,14 @@
 #
 # Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
 
+function qb_arg_array ()
+{
+QBarg=()
+[ -z "$QBarg1" ] || QBarg=("$QBarg1")
+[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
+}
+
+
 function qblogin () {
 if [ ! -z "$QBurl" ]
     then
@@ -93,7 +101,6 @@ QBarg2=$curlopt2
 #QBcookie="SID=$QBcookie"
 echo Success
 }
-
 
 # Log out
 # Usage: qblogout

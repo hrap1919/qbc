@@ -4,12 +4,12 @@
 ##
 # qbhelp: qbclient usage help
 # qbhelp:
-# Usage: qbhelp [(list | FUNCTION)]
+# Usage: qbhelp [(list | [-u] FUNCTION)]
 # qbhelp:
 # qbhelp: Options:
 # qbhelp: list - list of available FUNCTIONs
+# qbhelp: -u FUNCTION - the usage of FUNCTION
 # qbhelp: FUNCTION - the help for FUNCTION
-# qbhelp:
 
 function qbhelp ()
 {
@@ -20,14 +20,28 @@ if [ "$1" == "list" ]
          [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && echo "$line3"
         done < "$QBfuncfile"
     else
+     local usage=""
+     if [ "$1" == "-u" ]
+        then
+         usage="yes"
+         shift
+     fi
      local funct="$1"
      [ -z "$1" ] && funct="qbhelp"
      [ "${funct:0:2}" == "qb" ] || funct="qb$funct"
      while read line1 line2 line3 line4
         do
-         [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && [ "$line3" == "${funct}" ] && echo "Usage: $line3 $line4"
-         [ "$line1" == "#" ] && [ "$line2" == "${funct}:" ] && echo "$line3 $line4"
+         if [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && [ "$line3" == "${funct}" ]
+            then
+             echo "Usage: $line3 $line4"
+            else
+             if [ -z "$usage" ] && [ "$line1" == "#" ] && [ "$line2" == "${funct}:" ] 
+                then
+                 echo "$line3 $line4"
+             fi
+         fi
         done < "$QBfuncfile"
+        [ -z "$usage" ] && echo
 fi
 }
 
@@ -183,6 +197,7 @@ builtin exit "$exitcode"
 }
 
 # qbreauth: Re-authorize to the server with the same user/password
+# qbreauth:
 # Usage: qbreauth
 function qbreauth ()
 {
@@ -194,10 +209,11 @@ exit 98
 }
 
 
-# Add torrent
-# qbtoradd: Add torrent
+# qbtoradd: Add a torrent by a URL (use quotes), or by a torrent FILE.
+# qbtoradd:
 # Usage: qbtoradd ( -u 'URL'| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]
-#use quotes in URL
+# qbtoradd:
+# qbtoradd: Each OPTION has the form ARG=VALUE for ARGs listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
 function qbtoradd ()
 {
@@ -226,9 +242,11 @@ curl "${datarray[@]}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
 echo
 }
 
-# Get the value of specified prefernce property, or print all preferences
-#
+# qbprefget: Get the value of specified prefernce property, or print all preferences
+# qbprefget:
 # Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
+# qbprefget:
+# qbprefget: With the "-r" option the function returns the raw value of a property
 
 function qbprefget ()
 {
@@ -259,9 +277,11 @@ fi
 return 0
 }
 
-# Set a new value of the preference property
-#
+# qbprefset: Send new values of specified preference properties
+# qbprefset:
 # Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
+# qbprefset:
+# qbprefset: The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages
 
 function qbprefset ()
 {
@@ -333,8 +353,8 @@ if [ "$nocheck" == "false" ]
 fi
 }
 
-# Change password
-#
+# qbpasswd: Change WebUI password
+# qbpasswd:
 # Usage: qbpasswd
 
 function qbpasswd ()
@@ -360,8 +380,8 @@ if [ "$newpasswd" == "$newpasswd1" ]
 fi
 }
 
-# List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
-#
+# qbinfo: List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
+# qbinfo:
 # Usage: qbinfo
 
 function qbinfo ()
@@ -369,10 +389,11 @@ function qbinfo ()
 curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
-# Select the torrent with the specified index from qbinfo ()
-#
+# qbselect: Select the torrent with the specified index from qbinfo ()
+# qbselect:
 # Usage: qbselect [-s] [INDEX]
-# Option -s: silent mode
+# qbselect:
+# qbselect: Option -s: silent mode
 
 function qbselect ()
 {
@@ -400,8 +421,8 @@ fi
 fi
 }
 
-# Delete the selected torrent. The correct index from qbinfo () must be specifies.
-#
+# qbdel: Delete the selected torrent. The correct index from qbinfo () must be specifies.
+# qbdel:
 # Usage: qbdel INDEX
 
 function qbdel ()
@@ -421,8 +442,8 @@ fi
 fi
 }
 
-# Get the specified information of the selected torrent, or print it completely
-#
+# qbtorinfo: Get the specified information of the selected torrent, or print it completely
+# qbtorinfo:
 # Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]
 
 function qbtorinfo ()
@@ -459,8 +480,8 @@ fi
 return 0
 }
 
-# Get the specified property of the selected torrent, or print all it's properties
-#
+# qbtorprop: Get the specified property of the selected torrent, or print all it's properties
+# qbtorprop:
 # Usage: qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
 
 function qbtorprop ()
@@ -497,24 +518,75 @@ fi
 return 0
 }
 
-# Trackers info of the selected torrent
-#
+# qbtrackers: Trackers info of the selected torrent
+# qbtrackers:
 # Usage: qbtrackers
 
 function qbtrackers ()
 {
-if [ "x$QBhash" == "x" ]
+if [ -z "$QBhash" ]
 then
-echo No torrent is selected
+echo 'No torrent is selected'
 else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" | jq '.[]'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" |
+jq '.[]|.url+" ("+
+(.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
+"), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)'
 fi
 }
 
-# Pause, resume, recheck and reannounce of the selected torrent
-#
-# Usage: qbcommand COMMAND
-# COMMAND = pause, resume, recheck, reannounce
+# qbtrackedit: Edit trackers of the selected torrent
+# qbtrackedit:
+# Usage: qbtrackedit (-d URL | URL_1 [URL_2])
+# qbtrackedit:
+# qbtrackedit: Options:
+# qbtrackedit: -d URL - Delete the tracker URL
+# qbtrackedit:  URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
+
+function qbtrackedit ()
+{
+local resp
+local url1=$(echo "$1"|jq -rR '@uri')
+local url2=$(echo "$2"|jq -rR '@uri')
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
+fi
+if [ -z "$1" ]
+    then
+     qbhelp -u qbtrackedit
+     return 127
+fi
+if [ "$1" == "-d" ]
+    then
+     if [ -z "$2" ]
+      then
+       qbhelp -u qbtrackedit
+       return 127
+      else
+       resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/removeTrackers?hash=$QBhash&urls=$url2" 2>/dev/null)
+     fi
+    else
+     if [ -z "$2" ]
+        then
+         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addTrackers?hash=$QBhash&urls=$url1" 2>/dev/null)
+        else
+         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/editTracker?hash=$QBhash&origUrl=$url2&newUrl=$url1" 2>/dev/null)
+     fi
+fi
+if [ "$resp" != 200 ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+return 0
+}
+
+
+# qbcommand: Pause, resume, recheck and reannounce of the selected torrent
+# qbcommand:
+# Usage: qbcommand (pause | resume | recheck | reannounce)
 
 function qbcommand ()
 {
@@ -539,8 +611,8 @@ return 0
 }
 
 
-# Add peer
-#
+# qbpeeradd: Add a peer
+# qbpeeradd:
 # Usage: qbpeeradd PEER
 
 function qbpeeradd ()
@@ -570,8 +642,11 @@ return 0
 }
 
 
-# Toggle Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+# qbmedia: Control of Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+# qbmedia:
 # Usage: qbmedia ARG1 [ARG2]
+# qbmedia:
+# qbmedia: Set Sequential_Download property of the selected torrent to ARG1. Set First_Last_Piece_Priority property either to ARG2, or to ARG1 (if ARG2 is absent). Each of ARG1 and ARG2 must be equal to either "true" or "false"
 
 function qbmedia ()
 {
@@ -597,8 +672,8 @@ if [ $# -lt 1 ]
 fi
 }
 
-# Set new location of downloaded files of the selected torrent
-#
+# qblocationset: Set new location of downloaded files of the selected torrent
+# qblocationset:
 # Usage: qblocationset NEW_LOCATION
 
 function qblocationset ()
@@ -616,8 +691,8 @@ fi
 fi
 }
 
-# Peers info of the selected torrent
-#
+# qbpeers: Peers info of the selected torrent
+# qbpeers:
 # Usage: qbpeers
 
 function qbpeers ()
@@ -632,9 +707,26 @@ fi
 
 
 
-#Scaled pieces state string
-#
+# qbpieceview: Scaled piece states string
+# qbpieceview:
 # Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
+# qbpieceview:
+# qbpieceview: Print a fixed number of symbols showing the state of pieces blocks of the selected torrent.
+# qbpieceview: Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal).
+# qbpieceview: If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). 
+# qbpieceview: The meaning of symbols:
+# qbpieceview:
+# qbpieceview: "#" - completely downloaded block
+# qbpieceview:
+# qbpieceview: "+" - partially downloaded block
+# qbpieceview:
+# qbpieceview: "v" - downloading block
+# qbpieceview:
+# qbpieceview: "-" - not downloaded (empty) block
+# qbpieceview:
+# qbpieceview: The option "-o" specifies the index of a file, whose only pieces will be shown.
+# qbpieceview: The option "-i" specifies the interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
+
 function qbpieceview ()
 {
 if [ -z "$QBhash" ]
@@ -722,9 +814,13 @@ fi
 
 
 
-# List the files of the selected torrent with a short info
-#
+# qbcontent: List the files of the selected torrent with a short info
+# qbcontent:
 # Usage: qbcontent [FILE_INDEX_1] [FILE_INDEX_2]
+# qbcontent:
+# qbcontent: Without arguments list all files of the selected torrent in the alphabetical order with a short info. 
+# qbcontent: If FILE_INDEX1 is indicated then the list starts with this index and finishes at FILE_INDEX2. 
+# qbcontent: If no FILE_INDEX2 or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
 
 function qbcontent ()
 {
@@ -748,16 +844,14 @@ if [ -z "$1" ]
      jq 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
      (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
 fi
-
-
-
 return 0
 }
 
-# Get the info of the specified file of the selected torrent
-#
-# Usage: qbfileinfo FILE_INDEX [PROPERTY]
-# FILE_INDEX corresponds to the output of qbcontent ()
+# qbfileinfo: Get the info of the specified file of the selected torrent
+# qbfileinfo:
+# Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
+# qbfileinfo:
+# qbfileinfo: FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileinfo ()
 {
@@ -800,10 +894,11 @@ fi
 return 0
 }
 
-# Set priority of the specified file of the selected torrent, or set the priority for all it's files
-#
+# qbfileprio: Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
+# qbfileprio:
 # Usage: qbfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
-# FILE_INDEX corresponds to the output of qbcontent ()
+# qbfileprio:
+# qbfileprio: FILE_INDEX corresponds to the output of qbcontent ()
 
 function qbfileprio ()
 {

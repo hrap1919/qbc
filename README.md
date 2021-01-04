@@ -33,9 +33,12 @@ qbclient usage help
  
 Usage: qbhelp [(list | [-u] FUNCTION)]
  
-Options: 
+Options:
+
 list - list of available FUNCTIONs
+
 -u FUNCTION - the usage of FUNCTION
+
 FUNCTION - the help for FUNCTION
 
 2. qbreauth
@@ -119,7 +122,9 @@ Edit trackers of the selected torrent
 Usage: qbtrackedit (-d URL | URL_1 [URL_2])
  
 Options: 
+
 -d URL - Delete the tracker URL
+
 URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
 
 14. qbcommand
@@ -161,8 +166,11 @@ Scaled piece states string
 Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
  
 Print a fixed number of symbols showing the state of pieces blocks of the selected torrent.
+
 Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal).
+
 If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece).
+
 The meaning of symbols:
  
 "#" - completely downloaded block
@@ -174,6 +182,7 @@ The meaning of symbols:
 "-" - not downloaded (empty) block
  
 The option "-o" specifies the index of a file, whose only pieces will be shown.
+
 The option "-i" specifies the interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
 
 20. qbcontent
@@ -183,7 +192,9 @@ List the files of the selected torrent with a short info
 Usage: qbcontent [FILE_INDEX_1] [FILE_INDEX_2]
  
 Without arguments list all files of the selected torrent in the alphabetical order with a short info.
+
 If FILE_INDEX1 is indicated then the list starts with this index and finishes at FILE_INDEX2.
+
 If no FILE_INDEX2 or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
 
 21. qbfileinfo

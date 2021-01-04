@@ -2,9 +2,18 @@
 ### Qbittorent shell client
 ##
 ##
+function qbhelp ()
+{
+while read line1 line2 line3 line4
+do
+[ "$line1" == "#" ] && [ "$line2" == "Usage:" ] &&
+echo "$line3"
+done < "$QBfuncfile"
+}
+
 # Log in to the server
 #
-# Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
+## Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
 
 function qb_arg_array ()
 {
@@ -98,16 +107,15 @@ fi
 QBurl=$1
 QBarg1=$curlopt1
 QBarg2=$curlopt2
-#QBcookie="SID=$QBcookie"
+qb_arg_array
 echo Success
 }
 
 # Log out
-# Usage: qblogout
+## Usage: qblogout
 
 function qblogout ()
 {
-qb_arg_array
 if [ -z "$QBurl" ]
     then
      echo "Not logged in"
@@ -119,6 +127,7 @@ unset QBcookie
 unset QBhash
 unset QBarg1
 unset QBarg2
+unset QBarg
 
 if [ "$exitcode" == 200 ]
     then
@@ -132,14 +141,46 @@ if [ "$exitcode" == 200 ]
 }
 
 
+function exit ()
+{
+if [ -z "$QBurl" ]
+    then
+     exitcode=0
+    else
+     local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+     if [ "$exitcode" == "200" ]
+        then
+         >&2 echo Logged out
+         exitcode=0
+        else
+         >&2 echo 'Warning: logout with the following cookie did not succeed:'
+         >&2 echo "$QBcookie"
+         exitcode=1
+    fi
+fi
+[ -z "$1" ] || exitcode="$1"
+builtin exit "$exitcode"
+}
+
+# qbreauth: Re-authorize to the server with the same user/password
+# Usage: qbreauth
+function qbreauth ()
+{
+if [ ! -z "$QBhash" ] &&  [ ! -z "$QBhashtmp" ]
+    then
+     echo "$QBhash" > "$QBhashtmp"
+fi
+exit 98
+}
+
+
 # Add torrent
-#
+# qbtoradd: Add torrent
 # Usage: qbtoradd ( -u 'URL'| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]
 #use quotes in URL
 
 function qbtoradd ()
 {
-qb_arg_array
 local datarray=("${QBarg[@]}")
 local tmptorrent=""
 if [ "$1" == "-u" ]
@@ -171,7 +212,6 @@ echo
 
 function qbprefget ()
 {
-qb_arg_array
 if [ "$1" == "-r" ]
     then
      if [ -z "$2" ] || [ $# -gt 2 ]
@@ -205,7 +245,6 @@ return 0
 
 function qbprefset ()
 {
-qb_arg_array
 local silent="false"
 local nocheck="false"
 local strval=""
@@ -280,7 +319,6 @@ fi
 
 function qbpasswd ()
 {
-qb_arg_array
 local newpasswd
 local newpasswd1
 read -rs -p "New password: " newpasswd
@@ -308,7 +346,6 @@ fi
 
 function qbinfo ()
 {
-qb_arg_array
 curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
@@ -319,7 +356,6 @@ curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=a
 
 function qbselect ()
 {
-qb_arg_array
 local silent
 if  [ "$1" == "-s" ]
 then
@@ -350,7 +386,6 @@ fi
 
 function qbdel ()
 {
-qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
@@ -372,7 +407,6 @@ fi
 
 function qbtorinfo ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo 'No torrent is selected'
@@ -411,7 +445,6 @@ return 0
 
 function qbtorprop ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo 'No torrent is selected'
@@ -450,7 +483,6 @@ return 0
 
 function qbtrackers ()
 {
-qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
@@ -466,7 +498,6 @@ fi
 
 function qbcommand ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -494,7 +525,6 @@ return 0
 
 function qbpeeradd ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -525,7 +555,6 @@ return 0
 
 function qbmedia ()
 {
-qb_arg_array
 if [ $# -lt 1 ]
     then
      echo 'Usage: qbmedia ARG1 [ARG2]'
@@ -554,7 +583,6 @@ fi
 
 function qblocationset ()
 {
-qb_arg_array
 if [ -z "$QBhash"  ]
 then
 echo No torrent is selected
@@ -574,7 +602,6 @@ fi
 
 function qbpeers ()
 {
-qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
@@ -590,7 +617,6 @@ fi
 #Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
 function qbpieceview ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -682,7 +708,6 @@ fi
 
 function qbcontent ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo "No torrent is selected"
@@ -716,7 +741,6 @@ return 0
 
 function qbfileinfo ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo 'No torrent is selected'
@@ -763,7 +787,6 @@ return 0
 
 function qbfileprio ()
 {
-qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -802,92 +825,7 @@ if [ "$exitcode" == "200" ]
 fi
 }
 
-##### Experimental functions not declared in Qbittorrent WebAPI
-
-# Download torrent file of selected torrent to $1
-# The variable $local_path must be set up in the code below
-#
-# Usage: qb_get_torrent_file [FILE_NAME]
-
-function qb_get_torrent_file ()
-{
+HISTFILE="$HOME/.qbclient_history"
+HISTCONTROL="ignoreboth:erasedups"
+PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "'
 qb_arg_array
-# The $localpath is the share folder of the server. Usually it is ~/.local/share/qBittorrent
-# It must contain simlink "BT_backup"->"public"
-# Rename "BT_backup" to "public" and make such a simlink on the server side
-local local_path="/home/user/.local/share/qBittorrent"
-#
-if [ "x$QBhash" == "x" ]
-    then
-     echo No torrent is selected
-    else
-     local save_file
-     if [ "x$1" == "x" ]
-        then
-         save_path="$(qbtorinfo name).torrent"
-        else
-         save_path="$1"
-     fi
-     if [ -f "$save_path" ]
-        then
-         echo File "$save_path" already exists
-        else
-         local alternative_webui_enabled=$(qbprefget alternative_webui_enabled)
-         local alternative_webui_path=$(qbprefget alternative_webui_path)
-         qbprefset alternative_webui_path \""$local_path"\"
-         qbprefset alternative_webui_enabled true
-         curl "${QBarg[@]}" -s --cookie $QBcookie "$QBurl/$QBhash.torrent" --output "$save_path"
-         qbprefset alternative_webui_enabled "$alternative_webui_enabled"
-         qbprefset alternative_webui_path \""$alternative_webui_path"\"
-         if [ -f "$save_path" ]
-            then
-             echo  File "$save_path" sucessfully downloaded
-            else
-             echo An error is occurred $save_file
-         fi
-      fi
-fi
-}
-
-# Add url into the torrent client ensuring that the actual download will be paused
-#
-# Usage: qb_add_url_paused "URL" (use quotes!)
-
-function qb_add_url_paused ()
-{
-qb_arg_array
-local response=$(curl "${QBarg[@]}" -F "urls=$1" -F "dlLimit=50000" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
-if [ $response == "Ok." ]
-then
-QBhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
-local state=metaDL
-echo; echo Downloading metadata...
-while [ $state == "metaDL" ]
-    do
-     state=$(qbtorinfo state)
-    done
-qb_get_torrent_file $QBhash.torrent > /dev/null
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true"
-curl "${QBarg[@]}" -F 'torrents=@'"$QBhash.torrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-rm $QBhash.torrent
-echo
-else
-echo An error is occurred
-fi
-}
-
-#generic curl call
-function qbcurl ()
-{
-qb_arg_array
-curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/$1"
-echo
-}
-
-
-#jq '[length as $len|to_entries |[.[]|{ "a":(.key*100/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
-#reduce .[] as $n (4;if .==4 or (.==2 and $n!=2) then $n else if $n==1 then 1 else . end end)|tostring]|add'
-
- #qbcurl "torrents/pieceStates?hash=$QBhash" | jq -r --arg aone "$arg" 'length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
- #[to_entries |[.[]|{"a":(.key*$size*$mult/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
- #reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if .==3 and $n==0 then 1 else if .==0 and $n==2 then 1 else . end end end end)|tostring]|add'

@@ -5,60 +5,7 @@ QBarg=()
 [ -z "$QBarg1" ] || QBarg=("$QBarg1")
 [ -z "$QBarg2" ] || QBarg+=("$QBarg2")
 }
-function exit ()
-{
-if [ -z "$QBurl" ]
-    then
-     exitcode=0
-    else
-     qb_arg_array
-     local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
-     if [ "$exitcode" == "200" ]
-        then
-         >&2 echo Logged out
-         exitcode=0
-        else
-         >&2 echo 'Warning: logout with the following cookie did not succeed:'
-         >&2 echo "$QBcookie"
-         exitcode=1
-    fi
-fi
-[ -z "$1" ] || exitcode="$1"
-builtin exit "$exitcode"
-}
-
-function qbreauth ()
-{
-if [ ! -z "$QBhash" ] &&  [ ! -z "$QBhashtmp" ]
-    then
-     echo "$QBhash" > "$QBhashtmp"
-fi
-exit 98
-}
-. $(dirname "$0")"/../lib/qbclient/qbfunctions"
-declare -fx qb_arg_array
-declare -fx exit
-declare -fx qbreauth
-declare -fx qbtoradd
-declare -fx qbprefget
-declare -fx qbprefset
-declare -fx qbpasswd
-declare -fx qbinfo
-declare -fx qbselect
-declare -fx qbdel
-declare -fx qbtorinfo
-declare -fx qbtorprop
-declare -fx qbtrackers
-declare -fx qbcommand
-declare -fx qbpeeradd
-declare -fx qbmedia
-declare -fx qblocationset
-declare -fx qbpeers
-declare -fx qbcontent
-declare -fx qbfileinfo
-declare -fx qbfileprio
-declare -fx qbpieceview
-
+export QBfuncfile=$(dirname "$0")"/../lib/qbclient/qbfunctions"
 
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
 { [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && shift
@@ -146,7 +93,7 @@ if [ ! -z "$QBhashtmp" ] && [ -f "$QBhashtmp" ]
      rm -f "$QBhashtmp"
 fi
 export QBhashtmp=$(mktemp -u 2>/dev/null)
-HISTFILE="$HOME/.qbclient_history" HISTCONTROL="ignoreboth:erasedups" PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "' /bin/bash "$@"
+/bin/bash --rcfile $(dirname "$0")"/../lib/qbclient/qbfunctions" "$@"
 loopcode="$?"
 done
 #We do not know if the redefined exit has been already invoked

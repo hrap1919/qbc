@@ -34,7 +34,7 @@ qBittorrent 4.3.1
 
 2. qbtoradd (-u 'URL' | -f FILENAME) [OPTIONS]
     
-    Add a torrent by a URL (use quotes), or by a torrent FILE.
+    Add a torrent by a URL (use quotes), or by a torrent FILE. Each OPTION has the form ARG=VALUE for ARGs listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 3. qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
     
     Print specified preference properties, or print all preferences. With the "-r" option the function returns the raw value of a property

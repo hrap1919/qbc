@@ -64,11 +64,12 @@ QBarg2=$curlopt2
 password=$(echo "$password" | jq  -rR @uri)
 login=$(echo "$login" | jq  -rR @uri)
 local exitcode=""
-QBcookie=$(curl $curlopt1 $curlopt2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+qb_arg_array
+QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
 while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
 exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
 QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
-#QBcookie=$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+#QBcookie=$(curl "${QBarg[@]}" -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
     then
      if [ "$exitcode" == 200 ]
@@ -99,12 +100,13 @@ echo Success
 
 function qblogout ()
 {
+qb_arg_array
 if [ -z "$QBurl" ]
     then
      echo "Not logged in"
      return 1
 fi
-local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
 unset QBurl
 unset QBcookie
 unset QBhash
@@ -123,37 +125,37 @@ if [ "$exitcode" == 200 ]
 }
 
 
-# Add url
+# Add torrent
 #
-# Usage: qbaddurl "URL" (use quotes!)
+# Usage: qbtoradd ( -u 'URL'| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]
+#use quotes in URL
 
-function qbaddurl ()
+function qbtoradd ()
 {
-curl $QBarg1 $QBarg2 -F "urls=$1" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-}
-
-# Add torrent file
-#
-# Usage: qbaddfile FILENAME
-
-function qbaddfile ()
-{
-local tmptorrent=$(mktemp)
-cp "$1" "$tmptorrent"
-curl $QBarg1 $QBarg2 -F 'torrents=@'"$tmptorrent" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-rm "$tmptorrent"
-}
-
-# Add torrent file in the paused state
-#
-# Usage: qbaddaused FILENAME
-
-function qbaddpaused ()
-{
-local tmptorrent=$(mktemp)
-cp "$1" "$tmptorrent"
-curl $QBarg1 $QBarg2 -F 'torrents=@'"$tmptorrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-rm "$tmptorrent"
+qb_arg_array
+local datarray=("${QBarg[@]}")
+local tmptorrent=""
+if [ "$1" == "-u" ]
+    then
+     datarray+=("-F" "urls=$2")
+    else
+     if [ "$1" == "-f" ]
+        then
+         datarray+=("-F" "torrents=@$2")
+        else
+         echo 'qbtoradd ( -u URL| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]'
+         return 127
+     fi
+fi
+shift
+shift
+while [ ! -z "$1" ]
+    do
+     datarray+=("-F" "$1")
+     shift
+    done
+curl "${datarray[@]}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+echo
 }
 
 # Get the value of specified prefernce property, or print all preferences
@@ -162,6 +164,7 @@ rm "$tmptorrent"
 
 function qbprefget ()
 {
+qb_arg_array
 if [ "$1" == "-r" ]
     then
      if [ -z "$2" ] || [ $# -gt 2 ]
@@ -169,11 +172,11 @@ if [ "$1" == "-r" ]
          echo 'Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]'
          return 127
      fi
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
     else
 if [ -z "$1" ]
     then
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
     else
      local jj='{"'"$1"'":.'"$1"
      shift
@@ -183,7 +186,7 @@ if [ -z "$1" ]
          shift
      done
      jj="$jj"'}'
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq "$jj"
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq "$jj"
 fi
 fi
 }
@@ -194,6 +197,7 @@ fi
 
 function qbprefset ()
 {
+qb_arg_array
 local silent="false"
 local nocheck="false"
 local strval=""
@@ -213,7 +217,7 @@ if [ -z $1 ]
      echo 'Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]'
      return 127
 fi
-local pref=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
 local j='{}'
 while [ ! -z "$1" ]
     do
@@ -243,7 +247,7 @@ if [ "$silent" == "false" ]
          return 1
      fi
 fi
-resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
+resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      echo 'An error is occured'
@@ -251,7 +255,7 @@ if [ "$resp" != "200" ]
 fi
 if [ "$nocheck" == "false" ]
     then
-     local pref=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+     local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
      echo 'Just checked preferences:'
      echo $pref| jq $jj
     else
@@ -268,6 +272,7 @@ fi
 
 function qbpasswd ()
 {
+qb_arg_array
 local newpasswd
 local newpasswd1
 read -rs -p "New password: " newpasswd
@@ -277,7 +282,7 @@ echo
 if [ "$newpasswd" == "$newpasswd1" ]
     then
      newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
-     local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
+     local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
      if [ "$resp" != "200" ]
         then
          echo 'An error is occured'
@@ -295,7 +300,8 @@ fi
 
 function qbinfo ()
 {
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
+qb_arg_array
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
 # Select the torrent with the specified index from qbinfo ()
@@ -305,6 +311,7 @@ curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort
 
 function qbselect ()
 {
+qb_arg_array
 local silent
 if  [ "$1" == "-s" ]
 then
@@ -319,12 +326,12 @@ echo No torrent is selected
 else
 if [ "x$1" != "x" ]
 then
-QBhash=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
+QBhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
 fi
 if [ "x$silent" == "x" ]
 then
 echo Torrent with hash="$QBhash" is selected
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 fi
 fi
 }
@@ -335,14 +342,15 @@ fi
 
 function qbdel ()
 {
+qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
-local checkhash=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
+local checkhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
 if [ "$QBhash" == "$checkhash" ]
 then
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true" 
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true" 
 unset QBhash
 else
 echo The selected hash $QBhash differ for the hash of $1
@@ -356,15 +364,16 @@ fi
 
 function qbtorinfo ()
 {
+qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
 if [ "x$1" = "x" ]
 then
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[]'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[]'
 else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r '.[].'"$1"
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r '.[].'"$1"
 fi
 fi
 }
@@ -375,15 +384,16 @@ fi
 
 function qbtorprop ()
 {
+qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
 if [ "x$1" = "x" ]
 then
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
 else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$1"
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$1"
 fi
 fi
 }
@@ -394,11 +404,12 @@ fi
 
 function qbtrackers ()
 {
+qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" | jq '.[]'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" | jq '.[]'
 fi
 }
 
@@ -409,6 +420,7 @@ fi
 
 function qbcommand ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -420,7 +432,7 @@ if [ -z "$1" ]
      echo 'COMMAND = pause, resume, recheck, reannounce'
      return 127
 fi
-local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
+local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      echo 'An error is occured'
@@ -432,10 +444,11 @@ return 0
 
 # Add peer
 #
-# Usage: qbaddpeer PEER
+# Usage: qbpeeradd PEER
 
-function qbaddpeer ()
+function qbpeeradd ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -446,7 +459,7 @@ if [ -z "$1" ]
      echo 'Usage: qbaddpeer PEER'
      return 127
 fi
-local resp=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
+local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      if [ "$resp" == 400 ]
@@ -466,6 +479,7 @@ return 0
 
 function qbmedia ()
 {
+qb_arg_array
 if [ $# -lt 1 ]
     then
      echo 'Usage: qbmedia ARG1 [ARG2]'
@@ -479,21 +493,22 @@ if [ $# -lt 1 ]
          if [ $# -gt 1 ]
             then fl="$2"
          fi
-         local oldval=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]')
+         local oldval=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]')
          local oldse=$(echo "$oldval" | jq -r '.[0]')
          local oldfl=$(echo "$oldval" | jq -r '.[1]')
-         [ "$se" == "$oldse" ] || curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
-         [ "$fl" == "$oldfl" ] || curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
+         [ "$se" == "$oldse" ] || curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
+         [ "$fl" == "$oldfl" ] || curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
      fi
 fi
 }
 
 # Set new location of downloaded files of the selected torrent
 #
-# Usage: qbsetlocation NEW_LOCATION
+# Usage: qblocationset NEW_LOCATION
 
-function qbsetlocation ()
+function qblocationset ()
 {
+qb_arg_array
 if [ -z "$QBhash"  ]
 then
 echo No torrent is selected
@@ -502,7 +517,7 @@ if [ -z "$1" ]
 then
 echo Usage: qbsetlocation NEW_LOCATION
 else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$1"
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$1"
 fi
 fi
 }
@@ -513,11 +528,12 @@ fi
 
 function qbpeers ()
 {
+qb_arg_array
 if [ "x$QBhash" == "x" ]
 then
 echo No torrent is selected
 else
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 fi
 }
 
@@ -528,6 +544,7 @@ fi
 #Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
 function qbpieceview ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -547,14 +564,14 @@ if [ "$1" == "-n" ]
 fi
 if [ "$1" == "-o" ]
     then
-     local pi=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+     local pi=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
      jq --arg i "$2" 'sort_by(.name)|.[($i|tonumber)].piece_range')
      if [ -z "$aone" ]
         then
-         curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
          jq -r --argjson pi "$pi" '.[$pi|.[0]:($pi|.[1])+1]|[.[]|if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
         else
-         curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
          jq -r --argjson pi "$pi" --arg aone "$aone" '.[$pi|.[0]:($pi|.[1])+1]|
          length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
          [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
@@ -569,15 +586,15 @@ if [ "$1" == "-o" ]
             then
              arg3="$2"
          fi
-         pi=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+         pi=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
          jq -c --arg i "$2" --arg j "$arg3" 'sort_by(.name) as $inp|reduce range($i|tonumber;($j|tonumber)+1) as $n ([];.+[($inp|.[$n]).piece_range|range(.[0];.[1]+1)]|unique)')
          if [ -z "$aone" ]
             then
-             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
              jq -r --argjson pi "$pi" '. as $inp|length as $len| [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end|
              if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
             else
-             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
              jq -r --argjson pi "$pi" --arg aone "$aone" '. as $inp|length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|
              [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end]|
              [.[] as $n|(range($mult)|$n)]|
@@ -588,11 +605,11 @@ if [ "$1" == "-o" ]
         else
          if [ -z "$aone" ]
             then
-             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
              jq -r '[.[]|
              if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
             else
-             curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
              jq -r --arg aone "$aone" 'length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
              [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
              reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if (.==3 and $n==0) or (.==0 and $n==2) then 1 else . end end end)|
@@ -604,9 +621,9 @@ fi
      #|.[]|. as $ind|($inp|.[$ind])]'
 
      #jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | .['"$1"'].key'
-     #curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']
+     #curl "${QBarg[@]}" -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq '.['"$index"']
 #fi
-#curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+#curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
 #jq -r --arg aone "$1" ""'[length as $len|($aone|tonumber) as $size|to_entries |[.[]|{ "a":(.key*$size/$len|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
 #reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if .==3 and $n==0 then 1 else if .==0 and $n==2 then 1 else . end end end end)|tostring]|add'
 }
@@ -619,6 +636,7 @@ fi
 
 function qbcontent ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo "No torrent is selected"
@@ -627,7 +645,7 @@ fi
 local arg2
 if [ -z "$1" ]
     then
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
      jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
      (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
     else
@@ -635,7 +653,7 @@ if [ -z "$1" ]
         then arg2="$1"
         else arg2="$2"
      fi
-     curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
      jq 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
      (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
 fi
@@ -652,6 +670,7 @@ return 0
 
 function qbfileinfo ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -663,9 +682,9 @@ if [ -z "$1" ]
     else
      if [ -z "$2" ]
         then
-         curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
+         curl "${QBarg[@]}" -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
         else
-         curl $QBarg1 $QBarg2 -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$2"
+         curl "${QBarg[@]}" -s  --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$2"
      fi
 fi
 }
@@ -677,6 +696,7 @@ fi
 
 function qbfileprio ()
 {
+qb_arg_array
 if [ -z "$QBhash" ]
     then
      echo No torrent is selected
@@ -691,13 +711,13 @@ local index=""
 local arg3
 if [ -z "$2" ]
     then
-     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add' 2>/dev/null)
+     index=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add' 2>/dev/null)
     else
      if [ -z $3 ]
         then arg3="$2"
         else arg3="$3"
      fi
-     index=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     index=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
      jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | [(.['"$2"'].key|tostring)]+ [.['"$2"'+1:'"$arg3"'+1] | "|"+(.[].key|tostring)]|add' 2>/dev/null)
 fi
 if [ -z "$index" ]
@@ -705,7 +725,7 @@ if [ -z "$index" ]
      echo "Fail"
      return 1
 fi
-local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1" 2>/dev/null)
+local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1" 2>/dev/null)
 if [ "$exitcode" == "200" ]
     then return 0
     else
@@ -724,6 +744,7 @@ fi
 
 function qb_get_torrent_file ()
 {
+qb_arg_array
 # The $localpath is the share folder of the server. Usually it is ~/.local/share/qBittorrent
 # It must contain simlink "BT_backup"->"public"
 # Rename "BT_backup" to "public" and make such a simlink on the server side
@@ -748,7 +769,7 @@ if [ "x$QBhash" == "x" ]
          local alternative_webui_path=$(qbprefget alternative_webui_path)
          qbprefset alternative_webui_path \""$local_path"\"
          qbprefset alternative_webui_enabled true
-         curl $QBarg1 $QBarg2 -s --cookie $QBcookie "$QBurl/$QBhash.torrent" --output "$save_path"
+         curl "${QBarg[@]}" -s --cookie $QBcookie "$QBurl/$QBhash.torrent" --output "$save_path"
          qbprefset alternative_webui_enabled "$alternative_webui_enabled"
          qbprefset alternative_webui_path \""$alternative_webui_path"\"
          if [ -f "$save_path" ]
@@ -767,10 +788,11 @@ fi
 
 function qb_add_url_paused ()
 {
-local response=$(curl $QBarg1 $QBarg2 -F "urls=$1" -F "dlLimit=50000" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
+qb_arg_array
+local response=$(curl "${QBarg[@]}" -F "urls=$1" -F "dlLimit=50000" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
 if [ $response == "Ok." ]
 then
-QBhash=$(curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
+QBhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on&reverse=true" | jq -r '.[0].hash')
 local state=metaDL
 echo; echo Downloading metadata...
 while [ $state == "metaDL" ]
@@ -778,8 +800,8 @@ while [ $state == "metaDL" ]
      state=$(qbtorinfo state)
     done
 qb_get_torrent_file $QBhash.torrent > /dev/null
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true"
-curl $QBarg1 $QBarg2 -F 'torrents=@'"$QBhash.torrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true"
+curl "${QBarg[@]}" -F 'torrents=@'"$QBhash.torrent" -F "paused=true" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
 rm $QBhash.torrent
 echo
 else
@@ -790,7 +812,8 @@ fi
 #generic curl call
 function qbcurl ()
 {
-curl $QBarg1 $QBarg2 -s --cookie "$QBcookie"  "${QBurl}/api/v2/$1"
+qb_arg_array
+curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/$1"
 echo
 }
 

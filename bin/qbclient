@@ -1,11 +1,18 @@
 #!/bin/bash
+function qb_arg_array ()
+{
+QBarg=()
+[ -z "$QBarg1" ] || QBarg=("$QBarg1")
+[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
+}
 function exit ()
 {
 if [ -z "$QBurl" ]
     then
      exitcode=0
     else
-     local exitcode=$(curl $QBarg1 $QBarg2 -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+     qb_arg_array
+     local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
      if [ "$exitcode" == 200 ]
         then
          >&2 echo Logged out
@@ -28,6 +35,30 @@ if [ ! -z "$QBhash" ] &&  [ ! -z "$QBhashtmp" ]
 fi
 exit 98
 }
+. $(dirname "$0")"/../lib/qbclient/qbfunctions"
+declare -fx qb_arg_array
+declare -fx exit
+declare -fx qbreauth
+declare -fx qbtoradd
+declare -fx qbprefget
+declare -fx qbprefset
+declare -fx qbpasswd
+declare -fx qbinfo
+declare -fx qbselect
+declare -fx qbdel
+declare -fx qbtorinfo
+declare -fx qbtorprop
+declare -fx qbtrackers
+declare -fx qbcommand
+declare -fx qbpeeradd
+declare -fx qbmedia
+declare -fx qblocationset
+declare -fx qbpeers
+declare -fx qbcontent
+declare -fx qbfileinfo
+declare -fx qbfileprio
+declare -fx qbpieceview
+
 
 
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
@@ -84,7 +115,8 @@ QBhashtmp=""
 loopcode=98
 while [ "$loopcode" == 98 ]
 do
-IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl $QBarg1 $QBarg2 -i --header "Referer: $QBurl" --data "username=$login&password=$password" "$QBurl/api/v2/auth/login" 2>/dev/null |
+qb_arg_array
+IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$login&password=$password" "$QBurl/api/v2/auth/login" 2>/dev/null |
 (IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
 #$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
@@ -104,31 +136,6 @@ if [ -z "$QBcookie" ]
          fi
      fi
 fi
-. $(dirname "$0")"/../lib/qbclient/qbfunctions"
-declare -fx exit
-declare -fx qbreauth
-declare -fx qbaddurl
-declare -fx qbaddfile
-declare -fx qbaddpaused
-declare -fx qbprefget
-declare -fx qbprefset
-declare -fx qbpasswd
-declare -fx qbinfo
-declare -fx qbselect
-declare -fx qbdel
-declare -fx qbtorinfo
-declare -fx qbtorprop
-declare -fx qbtrackers
-declare -fx qbcommand
-declare -fx qbaddpeer
-declare -fx qbmedia
-declare -fx qbsetlocation
-declare -fx qbpeers
-declare -fx qbcontent
-declare -fx qbfileinfo
-declare -fx qbfileprio
-declare -fx qbpieceview
-
 export QBcookie
 export QBarg1
 export QBarg2
@@ -144,5 +151,5 @@ HISTFILE="$HOME/.qbclient_history" HISTCONTROL="ignoreboth:erasedups" PROMPT_COM
 loopcode="$?"
 done
 #We do not know if the redefined exit has been already invoked
-curl $QBarg1 $QBarg2 -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
+curl "${QBarg[@]}" -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
 builtin exit 0

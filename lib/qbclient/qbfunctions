@@ -2,13 +2,33 @@
 ### Qbittorent shell client
 ##
 ##
+# qbhelp: qbclient usage help
+# qbhelp:
+# Usage: qbhelp [(list | FUNCTION)]
+# qbhelp:
+# qbhelp: Options:
+# qbhelp: list - list of available FUNCTIONs
+# qbhelp: FUNCTION - the help for FUNCTION
+# qbhelp:
+
 function qbhelp ()
 {
-while read line1 line2 line3 line4
-do
-[ "$line1" == "#" ] && [ "$line2" == "Usage:" ] &&
-echo "$line3"
-done < "$QBfuncfile"
+if [ "$1" == "list" ]
+    then
+     while read line1 line2 line3 line4
+        do
+         [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && echo "$line3"
+        done < "$QBfuncfile"
+    else
+     local funct="$1"
+     [ -z "$1" ] && funct="qbhelp"
+     [ "${funct:0:2}" == "qb" ] || funct="qb$funct"
+     while read line1 line2 line3 line4
+        do
+         [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && [ "$line3" == "${funct}" ] && echo "Usage: $line3 $line4"
+         [ "$line1" == "#" ] && [ "$line2" == "${funct}:" ] && echo "$line3 $line4"
+        done < "$QBfuncfile"
+fi
 }
 
 # Log in to the server
@@ -614,7 +634,7 @@ fi
 
 #Scaled pieces state string
 #
-#Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
+# Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
 function qbpieceview ()
 {
 if [ -z "$QBhash" ]

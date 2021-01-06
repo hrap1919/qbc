@@ -9,7 +9,7 @@ The option -k implies an insecure https connection. The option -c is for pointin
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
-qbclient -p 'the_password' http://localhost:8080 -c "qbprefset -s web_ui_max_auth_fail_count 10"
+qbclient -p 'the_password' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

@@ -27,7 +27,7 @@ qBittorrent 4.3.1
 
 ### Available functions:
 
-# 1. qbhelp
+#### 1. qbhelp
 
 qbclient usage help
 

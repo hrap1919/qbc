@@ -2,10 +2,31 @@
 ### Qbittorent shell client
 ##
 ##
+
+function exit ()
+{
+if [ -z "$QBurl" ]
+    then
+     exitcode=0
+    else
+     local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+     if [ "$exitcode" == "200" ]
+        then
+         >&2 echo Logged out
+         exitcode=0
+        else
+         >&2 echo 'Warning: logout with the following cookie did not succeed:'
+         >&2 echo "$QBcookie"
+         exitcode=1
+    fi
+fi
+[ -z "$1" ] || exitcode="$1"
+builtin exit "$exitcode"
+}
+
+
 # qbhelp: qbclient usage help
-# qbhelp:
 # Usage: qbhelp [(list | [-u] FUNCTION)]
-# qbhelp:
 # qbhelp: Options:
 # qbhelp: list - list of available FUNCTIONs
 # qbhelp: -u FUNCTION - the usage of FUNCTION
@@ -34,170 +55,19 @@ if [ "$1" == "list" ]
          if [ "$line1" == "#" ] && [ "$line2" == "Usage:" ] && [ "$line3" == "${funct}" ]
             then
              echo "Usage: $line3 $line4"
+             echo
             else
              if [ -z "$usage" ] && [ "$line1" == "#" ] && [ "$line2" == "${funct}:" ] 
                 then
                  echo "$line3 $line4"
+                 echo
              fi
          fi
         done < "$QBfuncfile"
-        [ -z "$usage" ] && echo
 fi
-}
-
-# Log in to the server
-#
-## Usage: qblogin [-k] [-p PASSWORD] URL LOGIN
-
-function qb_arg_array ()
-{
-QBarg=()
-[ -z "$QBarg1" ] || QBarg=("$QBarg1")
-[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
-}
-
-
-function qblogin () {
-if [ ! -z "$QBurl" ]
-    then
-     echo Already authorized
-     return 1
-fi
-local curlopt1
-local curlopt2
-if [ "$1" == "-k" ]
-    then
-     curlopt1="-k"
-     curlopt2=""
-     shift
-    else
-     if [ "$1" == "-c" ]
-        then
-         curlopt1="--cacert"
-         curlopt2="$2"
-         shift
-         shift
-        else
-         curlopt1=""
-         curlopt2=""
-     fi
-fi
-local login
-if [ "$1" == "-l" ]
-    then
-     login="$2"
-     shift
-     shift
-    else
-     login="admin"
-fi
-local password
-if [ "$1" == "-p" ]
-    then
-     password="$2"
-     shift
-     shift
-    else
-     password=""
-fi
-if [ -z "$1" ]
-    then
-     echo 'Usage: qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL'
-     return 127
-fi
-if [ -z "$password" ]
-    then
-     read -rs -p "Password for $login: " password
-     echo
-fi
-QBarg1=$curlopt1
-QBarg2=$curlopt2
-password=$(echo "$password" | jq  -rR @uri)
-login=$(echo "$login" | jq  -rR @uri)
-local exitcode=""
-qb_arg_array
-QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
-while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
-exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
-QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
-#QBcookie=$(curl "${QBarg[@]}" -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
-if [ -z "$QBcookie" ]
-    then
-     if [ "$exitcode" == 200 ]
-        then
-         echo "Fail. Invalid username/password"
-         return 126
-        else
-         if [ "$exitcode" == 403 ]
-            then
-             echo "Fail. Your IP is banned"
-             return 126
-            else
-             echo "Fail. Check URL and/or SSL certificate"
-             return 1
-         fi
-     fi
-fi
-QBurl=$1
-QBarg1=$curlopt1
-QBarg2=$curlopt2
-qb_arg_array
-echo Success
-}
-
-# Log out
-## Usage: qblogout
-
-function qblogout ()
-{
-if [ -z "$QBurl" ]
-    then
-     echo "Not logged in"
-     return 1
-fi
-local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
-unset QBurl
-unset QBcookie
-unset QBhash
-unset QBarg1
-unset QBarg2
-unset QBarg
-
-if [ "$exitcode" == 200 ]
-    then
-     echo Logged out
-     return 0
-    else
-     echo 'Warning: logout with the following cookie did not succeed:'
-     echo "$QBcookie"
-     return 1
-    fi
-}
-
-
-function exit ()
-{
-if [ -z "$QBurl" ]
-    then
-     exitcode=0
-    else
-     local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
-     if [ "$exitcode" == "200" ]
-        then
-         >&2 echo Logged out
-         exitcode=0
-        else
-         >&2 echo 'Warning: logout with the following cookie did not succeed:'
-         >&2 echo "$QBcookie"
-         exitcode=1
-    fi
-fi
-[ -z "$1" ] || exitcode="$1"
-builtin exit "$exitcode"
 }
 
 # qbreauth: Re-authorize to the server with the same user/password
-# qbreauth:
 # Usage: qbreauth
 function qbreauth ()
 {
@@ -209,52 +79,79 @@ exit 98
 }
 
 
-# qbtoradd: Add a torrent by a URL (use quotes), or by a torrent FILE.
-# qbtoradd:
-# Usage: qbtoradd ( -u 'URL'| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]
-# qbtoradd:
-# qbtoradd: Each OPTION has the form ARG=VALUE for ARGs listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
-function qbtoradd ()
+# qbversion: print the versions of used software
+# Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness]))]
+function qbversion ()
 {
-local datarray=("${QBarg[@]}")
-local tmptorrent=""
-if [ "$1" == "-u" ]
+if [ -z "$1" ]
     then
-     datarray+=("-F" "urls=$2")
+     echo "Early pre-alpha"
+     return 0
+fi
+resp="null"
+if [ "$1" == "app" ]
+    then
+     resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/version" 2>/dev/null)
     else
-     if [ "$1" == "-f" ]
-        then
-         datarray+=("-F" "torrents=@$2")
-        else
-         echo 'qbtoradd ( -u URL| -f FILE)  [API_PROP_NAME_1 API_PROP_VALUE_1 [API_PROP_NAME_2 API_PROP_VALUE_2 ...]]'
-         return 127
+     if [ "$1" == "api" ]
+      then
+      resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/webapiVersion" 2>/dev/null)
      fi
 fi
-shift
-shift
-while [ ! -z "$1" ]
-    do
-     datarray+=("-F" "$1")
-     shift
-    done
-curl "${datarray[@]}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-echo
+if [ "$1" == "build" ]
+    then
+     resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/buildInfo" 2>/dev/null)
+     if [ -z "$resp" ]
+        then
+         echo 'An error is occured'
+         return 1
+     fi
+     if [ -z $2 ]
+        then
+         echo $resp | jq 2>/dev/null
+         return 0
+        else
+         resp=$(echo $resp| jq -r ".$2" 2>/dev/null)
+     fi
+fi
+if [ -z "$resp" ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+if [ "$resp" == "null" ]
+    then
+     qbhelp -u qbversion
+     return 127
+    else
+     echo $resp
+     return 0
+fi
 }
 
-# qbprefget: Get the value of specified prefernce property, or print all preferences
-# qbprefget:
-# Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
-# qbprefget:
-# qbprefget: With the "-r" option the function returns the raw value of a property
 
-function qbprefget ()
+
+
+
+# qbstatus: Get the current status of the server
+# Usage: qbstatus
+function qbstatus ()
+{
+curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/transfer/info" 2>/dev/null |jq
+}
+
+# qbpref: Get the value of specified prefernce property, or print all preferences
+# Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
+# qbpref: With the "-r" option the function returns the raw value of a property
+
+function qbpref ()
 {
 if [ "$1" == "-r" ]
     then
      if [ -z "$2" ] || [ $# -gt 2 ]
         then
-         echo 'Usage: qbprefget [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]'
+         qbhelp -u qbpref
          return 127
      fi
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
@@ -277,13 +174,12 @@ fi
 return 0
 }
 
-# qbprefset: Send new values of specified preference properties
-# qbprefset:
-# Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
-# qbprefset:
-# qbprefset: The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages
+# qbprefedit: Send new values of specified preference properties
+# Usage: qbprefedit [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
+# qbprefedit: The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages
+# qbprefedit: To change the WebUI password by a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
 
-function qbprefset ()
+function qbprefedit ()
 {
 local silent="false"
 local nocheck="false"
@@ -299,21 +195,67 @@ if  [ "$1" == "-n" ]
      nocheck="true"
      shift
 fi
-if [ -z $1 ]
+if [ -z "$1" ]
     then
-     echo 'Usage: qbprefset [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]'
+     qbhelp -u qbprefedit
      return 127
 fi
-local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+if [ "$1" == "web_ui_password" ]
+then
+local newpasswd
+local newpasswd1
+if [ -z "$2" ]
+    then
+     read -rs -p "New password: " newpasswd
+     echo
+     read -rs -p "Retype new password: " newpasswd1
+     echo
+    else
+     newpasswd="$2"
+     newpasswd1="$2"
+fi
+if [ "$newpasswd" == "$newpasswd1" ]
+    then
+     newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
+     local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
+     if [ "$resp" != "200" ]
+        then
+         [ "$silent" == "true" ] || echo 'An error is occured'
+         return 1
+        else
+         [ "$silent" == "true" ] || echo 'The password was sent'
+         return 0
+     fi
+    else
+     echo 'Different passwords'
+     return 1
+fi
+fi
+local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" 2>/dev/null)
+if [ -z "$pref" ]
+    then
+     echo 'An error is occured'
+    return 1
+fi
 local j='{}'
 while [ ! -z "$1" ]
     do
+     if [ "$1" == "web_ui_password" ]
+        then
+         echo 'Can not change "web_ui_password" together with other preferences'
+         return 1
+     fi
      local t2=$(echo $pref| jq ".$1")
      if [ ${t2:0:1} == '"' ]
         then
-         j=$(echo "$j" | jq -c --arg k "$1" --arg v "$2" '.+([ { "key" : $k, "value": $v } ] | from_entries)')
+         j=$(echo "$j" | jq -c --arg k "$1" --arg v "$2" '.+([ { "key" : $k, "value": $v } ] | from_entries)' 2>/dev/null)
         else
-         j=$(echo "$j" | jq -c --arg k "$1" '.+([ { "key" : $k, "value":'"$2"' } ] | from_entries)')
+         j=$(echo "$j" | jq -c --arg k "$1" '.+([ { "key" : $k, "value":'"$2"' } ] | from_entries)' 2>/dev/null)
+     fi
+     if [ -z "$j" ]
+        then
+         [ "$silent" == "true" ] || echo 'An error is occured'
+         return 1
      fi
      shift
      shift
@@ -322,11 +264,11 @@ local resp=''
 local jj=''
 if [ "$silent" == "false" ]
     then
-     jj=$(echo $j | jq -r 'to_entries|"{"+([.[]|"\""+.key+"\":"+"."+.key+","]|add|.[0:length-1])+"}"')
+     jj=$(echo $j | jq -r 'to_entries|"{"+([.[]|"\""+.key+"\":"+"."+.key+","]|add|.[0:length-1])+"}"' 2>/dev/null)
      echo 'Old preferences:'
-     echo $pref| jq $jj
+     echo $pref| jq "$jj" 2>/dev/null
      echo 'New preferences:'
-     echo $j | jq
+     echo $j | jq 2>/dev/null
      read -r -p 'Type "yes" to send the new preferences to the server: ' resp
      if [ "$resp" != "yes" ]
         then
@@ -344,7 +286,7 @@ if [ "$nocheck" == "false" ]
     then
      local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
      echo 'Just checked preferences:'
-     echo $pref| jq $jj
+     echo $pref| jq $jj 2>/dev/null
     else
      if [ "$silent" == "false" ]
         then
@@ -353,49 +295,85 @@ if [ "$nocheck" == "false" ]
 fi
 }
 
-# qbpasswd: Change WebUI password
-# qbpasswd:
-# Usage: qbpasswd
+# qblist: List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
+# Usage: qblist
 
-function qbpasswd ()
-{
-local newpasswd
-local newpasswd1
-read -rs -p "New password: " newpasswd
-echo
-read -rs -p "Retype new password: " newpasswd1
-echo
-if [ "$newpasswd" == "$newpasswd1" ]
-    then
-     newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
-     local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
-     if [ "$resp" != "200" ]
-        then
-         echo 'An error is occured'
-        else
-         echo 'The password was sent'
-     fi
-    else
-     echo 'Different passwords'
-fi
-}
-
-# qbinfo: List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
-# qbinfo:
-# Usage: qbinfo
-
-function qbinfo ()
+function qblist ()
 {
 curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
-# qbselect: Select the torrent with the specified index from qbinfo ()
-# qbselect:
-# Usage: qbselect [-s] [INDEX]
-# qbselect:
-# qbselect: Option -s: silent mode
 
-function qbselect ()
+# qblistadd: Add a torrent by a URL (use quotes), or by a torrent FILE.
+# Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1 [ARG_2=VALUE_2 ...]]
+# qblistadd: The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
+
+function qblistadd ()
+{
+local datarray=("${QBarg[@]}")
+local tmptorrent=""
+if [ "$1" == "-u" ]
+    then
+     datarray+=("-F" "urls=$2")
+    else
+     if [ "$1" == "-f" ]
+        then
+         datarray+=("-F" "torrents=@$2")
+        else
+         qbhelp -u qblistadd
+         return 127
+     fi
+fi
+shift
+shift
+while [ ! -z "$1" ]
+    do
+     datarray+=("-F" "$1")
+     shift
+    done
+curl "${datarray[@]}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
+echo
+}
+
+
+# qblistdelete: Delete the selected torrent.
+# Usage: qblistdelete [-d] INDEX
+# qblistdelete: The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
+
+function qblistdelete ()
+{
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
+fi
+local deldata="false"
+if [ "$1" == "-d" ]
+    then
+     deldata="true"
+     shift
+fi
+if [ -z "$1" ]
+    then
+     qbhelp -u qblistdelete
+     return 127
+fi
+local resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash" 2>/dev/null)
+if [ "$QBhash" != "$resp" ]
+     then
+      echo "The selected hash $QBhash differ for the hash of $1"
+      return 1
+fi
+unset QBhash
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$resp&deleteFiles=$deldata"
+echo
+}
+
+# qblistselect: Select the torrent with the specified index from qbinfo ()
+# Usage: qblistselect [-s] [INDEX]
+# qblistselect: Option -s: silent mode
+
+function qblistselect ()
 {
 local silent
 if  [ "$1" == "-s" ]
@@ -421,29 +399,32 @@ fi
 fi
 }
 
-# qbdel: Delete the selected torrent. The correct index from qbinfo () must be specifies.
-# qbdel:
-# Usage: qbdel INDEX
+# qbtordo: Pause, resume, recheck and reannounce of the selected torrent
+# Usage: qbtordo (pause | resume | recheck | reannounce)
 
-function qbdel ()
+function qbtordo ()
 {
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-local checkhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash")
-if [ "$QBhash" == "$checkhash" ]
-then
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$QBhash&deleteFiles=true" 
-unset QBhash
-else
-echo The selected hash $QBhash differ for the hash of $1
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
 fi
+if [ -z "$1" ]
+    then
+     qbhelp -u qbtordo
+     return 127
 fi
+local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+return 0
 }
 
+
 # qbtorinfo: Get the specified information of the selected torrent, or print it completely
-# qbtorinfo:
 # Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]
 
 function qbtorinfo ()
@@ -457,7 +438,7 @@ if [ "$1" == "-r" ]
     then
      if [ -z "$2" ] || [ $# -gt 2 ]
         then
-         echo 'Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]'
+         qbhelp -u qbtorinfo
          return 127
      fi
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r ".[]|.$2"
@@ -480,190 +461,80 @@ fi
 return 0
 }
 
-# qbtorprop: Get the specified property of the selected torrent, or print all it's properties
-# qbtorprop:
-# Usage: qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
+# qbtorinfolocation: Show the save location of the selected torrent
+# Usage: qbtorinfolocation
 
-function qbtorprop ()
+function qbtorinfolocation ()
 {
-if [ -z "$QBhash" ]
-    then
-     echo 'No torrent is selected'
-     return 1
-fi
-if [ "$1" == "-r" ]
-    then
-     if [ -z "$2" ] || [ $# -gt 2 ]
-        then
-         echo 'Usage: qbtorprop [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]'
-         return 127
-     fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$2"
-     return 0
-fi
-if [ -z "$1" ]
-    then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
-    else
-     local jj='{"'"$1"'":.'"$1"
-     shift
-     while [ ! -z "$1" ]
-        do
-         jj="$jj"',"'"$1"'":.'"$1"
-         shift
-     done
-     jj="$jj"'}'
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq "$jj"
-fi
-return 0
+qbtorinfo save_path
+return $?
 }
 
-# qbtrackers: Trackers info of the selected torrent
-# qbtrackers:
-# Usage: qbtrackers
+# qbtorinfolocationedit: Set a new save location of the selected torrent
+# Usage: qbtorinfolocationedit NEW_LOCATION
 
-function qbtrackers ()
+function qbtorinfolocationedit ()
 {
-if [ -z "$QBhash" ]
+if [ -z "$QBhash"  ]
 then
-echo 'No torrent is selected'
+echo No torrent is selected
+return 1
 else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" |
-jq '.[]|.url+" ("+
-(.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
-"), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)'
-fi
-}
-
-# qbtrackedit: Edit trackers of the selected torrent
-# qbtrackedit:
-# Usage: qbtrackedit (-d URL | URL_1 [URL_2])
-# qbtrackedit:
-# qbtrackedit: Options:
-# qbtrackedit: -d URL - Delete the tracker URL
-# qbtrackedit:  URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
-
-function qbtrackedit ()
-{
-local resp
-local url1=$(echo "$1"|jq -rR '@uri')
-local url2=$(echo "$2"|jq -rR '@uri')
-if [ -z "$QBhash" ]
-    then
-     echo 'No torrent is selected'
-     return 1
-fi
 if [ -z "$1" ]
-    then
-     qbhelp -u qbtrackedit
-     return 127
-fi
-if [ "$1" == "-d" ]
-    then
-     if [ -z "$2" ]
-      then
-       qbhelp -u qbtrackedit
-       return 127
-      else
-       resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/removeTrackers?hash=$QBhash&urls=$url2" 2>/dev/null)
-     fi
-    else
-     if [ -z "$2" ]
-        then
-         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addTrackers?hash=$QBhash&urls=$url1" 2>/dev/null)
-        else
-         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/editTracker?hash=$QBhash&origUrl=$url2&newUrl=$url1" 2>/dev/null)
-     fi
-fi
-if [ "$resp" != 200 ]
-    then
-     echo 'An error is occured'
-     return 1
-fi
-return 0
-}
-
-
-# qbcommand: Pause, resume, recheck and reannounce of the selected torrent
-# qbcommand:
-# Usage: qbcommand (pause | resume | recheck | reannounce)
-
-function qbcommand ()
-{
-if [ -z "$QBhash" ]
-    then
-     echo No torrent is selected
-     return 1
-fi
-if [ -z "$1" ]
-    then
-     echo 'Usage: qbcommand COMMAND'
-     echo 'COMMAND = pause, resume, recheck, reannounce'
-     return 127
-fi
-local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
+then
+qbhelp -u qbtorinfolocationedit
+return 1
+else
+local arg=$(echo $1|jq -rR '@uri')
+resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$arg" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      echo 'An error is occured'
      return 1
 fi
 return 0
+fi
+fi
 }
 
 
-# qbpeeradd: Add a peer
-# qbpeeradd:
-# Usage: qbpeeradd PEER
+# qbtorinfosequential: Show  Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+# Usage: qbtorinfosequential
 
-function qbpeeradd ()
+function qbtorinfosequential ()
 {
-if [ -z "$QBhash" ]
-    then
-     echo No torrent is selected
-     return 1
-fi
-if [ -z "$1" ]
-    then
-     echo 'Usage: qbaddpeer PEER'
-     return 127
-fi
-local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
-if [ "$resp" != "200" ]
-    then
-     if [ "$resp" == 400 ]
-        then
-         echo 'The peer is not valid'
-        else
-         echo 'An error is occured'
-     fi
-     return 1
-fi
-return 0
+qbtorinfo seq_dl f_l_piece_prio
+return $?
 }
 
 
-# qbmedia: Control of Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
-# qbmedia:
-# Usage: qbmedia ARG1 [ARG2]
-# qbmedia:
-# qbmedia: Set Sequential_Download property of the selected torrent to ARG1. Set First_Last_Piece_Priority property either to ARG2, or to ARG1 (if ARG2 is absent). Each of ARG1 and ARG2 must be equal to either "true" or "false"
+# qbtorinfosequentialedit: Control of Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+# Usage: qbtorinfosequentialedit ARG1 [ARG2]
+# qbtorinfomedia: Set Sequential_Download property of the selected torrent to ARG1. Set First_Last_Piece_Priority property either to ARG2, or to ARG1 (if ARG2 is absent). Each of ARG1 and ARG2 must be equal to either "true" or "false"
 
-function qbmedia ()
+function qbtorinfosequentialedit ()
 {
 if [ $# -lt 1 ]
     then
-     echo 'Usage: qbmedia ARG1 [ARG2]'
+     qbhelp -u qbtorinfosequentialedit
+     return 1
     else
      if [ -z "$QBhash" ]
         then
          echo No torrent is selected
+         return 1
         else
          local se="$1"
          local fl="$1"
          if [ $# -gt 1 ]
             then fl="$2"
          fi
-         local oldval=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]')
+         local oldval=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]' 2>/dev/null)
+         if [ -z "$oldval" ]
+            then
+             echo 'An error is occured'
+             return 1
+         fi
          local oldse=$(echo "$oldval" | jq -r '.[0]')
          local oldfl=$(echo "$oldval" | jq -r '.[1]')
          [ "$se" == "$oldse" ] || curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
@@ -672,62 +543,20 @@ if [ $# -lt 1 ]
 fi
 }
 
-# qblocationset: Set new location of downloaded files of the selected torrent
-# qblocationset:
-# Usage: qblocationset NEW_LOCATION
+# qbtorblock: Scaled piece states string
+# Usage: qbtorblock [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
+# qbtorblock: Print a fixed number of symbols showing the state of pieces blocks of the selected torrent.
+# qbtorblock: Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal).
+# qbtorblock: If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). 
+# qbtorblock: The meaning of symbols:
+# qbtorblock: "#" - completely downloaded block
+# qbtorblock: "+" - partially downloaded block
+# qbtorblock: "v" - downloading block
+# qbtorblock: "-" - not downloaded (empty) block
+# qbtorblock: The option "-o" specifies the index of a file, whose only pieces will be shown.
+# qbtorblock: The option "-i" specifies the qbtorcontent interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
 
-function qblocationset ()
-{
-if [ -z "$QBhash"  ]
-then
-echo No torrent is selected
-else
-if [ -z "$1" ]
-then
-echo Usage: qbsetlocation NEW_LOCATION
-else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$1"
-fi
-fi
-}
-
-# qbpeers: Peers info of the selected torrent
-# qbpeers:
-# Usage: qbpeers
-
-function qbpeers ()
-{
-if [ "x$QBhash" == "x" ]
-then
-echo No torrent is selected
-else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
-fi
-}
-
-
-
-# qbpieceview: Scaled piece states string
-# qbpieceview:
-# Usage: qbpieceview [-n [NUMBER_OF_BLOCKS]] [(-o FILE_INDEX | -i FILE_INDEX1 [FILE_INDEX2])]
-# qbpieceview:
-# qbpieceview: Print a fixed number of symbols showing the state of pieces blocks of the selected torrent.
-# qbpieceview: Without the "-n" options the number of blocks equals to $COLUMNS (of the current terminal).
-# qbpieceview: If the option "-n" is present then the default number equals to the number of pieces of the torrent (so block=piece). 
-# qbpieceview: The meaning of symbols:
-# qbpieceview:
-# qbpieceview: "#" - completely downloaded block
-# qbpieceview:
-# qbpieceview: "+" - partially downloaded block
-# qbpieceview:
-# qbpieceview: "v" - downloading block
-# qbpieceview:
-# qbpieceview: "-" - not downloaded (empty) block
-# qbpieceview:
-# qbpieceview: The option "-o" specifies the index of a file, whose only pieces will be shown.
-# qbpieceview: The option "-i" specifies the interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
-
-function qbpieceview ()
+function qbtorblock ()
 {
 if [ -z "$QBhash" ]
     then
@@ -813,16 +642,164 @@ fi
 }
 
 
+# qbtorgeneral: Get the specified general properties of the selected torrent, or print all of them
+# Usage: qbtorgeneral [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
 
-# qbcontent: List the files of the selected torrent with a short info
-# qbcontent:
-# Usage: qbcontent [FILE_INDEX_1] [FILE_INDEX_2]
-# qbcontent:
-# qbcontent: Without arguments list all files of the selected torrent in the alphabetical order with a short info. 
-# qbcontent: If FILE_INDEX1 is indicated then the list starts with this index and finishes at FILE_INDEX2. 
-# qbcontent: If no FILE_INDEX2 or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
+function qbtorgeneral ()
+{
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
+fi
+if [ "$1" == "-r" ]
+    then
+     if [ -z "$2" ] || [ $# -gt 2 ]
+        then
+         qbhelp -u qbtorgeneral
+         return 127
+     fi
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$2"
+     return 0
+fi
+if [ -z "$1" ]
+    then
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
+    else
+     local jj='{"'"$1"'":.'"$1"
+     shift
+     while [ ! -z "$1" ]
+        do
+         jj="$jj"',"'"$1"'":.'"$1"
+         shift
+     done
+     jj="$jj"'}'
+     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq "$jj"
+fi
+return 0
+}
 
-function qbcontent ()
+
+
+
+# qbtortrack: Trackers info of the selected torrent
+# Usage: qbtortrack
+
+function qbtortrack ()
+{
+if [ -z "$QBhash" ]
+then
+echo 'No torrent is selected'
+else
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" |
+jq '.[]|.url+" ("+
+(.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
+"), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)'
+fi
+}
+
+# qbtortrackedit: Edit trackers of the selected torrent
+# Usage: qbtortrackedit (-d URL | URL_1 [URL_2])
+# qbtortrackedit: Options:
+# qbtortrackedit: -d URL - Delete the tracker URL
+# qbtortrackedit:  URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
+
+function qbtortrackedit ()
+{
+local resp
+local url1=$(echo "$1"|jq -rR '@uri')
+local url2=$(echo "$2"|jq -rR '@uri')
+if [ -z "$QBhash" ]
+    then
+     echo 'No torrent is selected'
+     return 1
+fi
+if [ -z "$1" ]
+    then
+     qbhelp -u qbtortrackedit
+     return 127
+fi
+if [ "$1" == "-d" ]
+    then
+     if [ -z "$2" ]
+      then
+       qbhelp -u qbtortrackedit
+       return 127
+      else
+       resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/removeTrackers?hash=$QBhash&urls=$url2" 2>/dev/null)
+     fi
+    else
+     if [ -z "$2" ]
+        then
+         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addTrackers?hash=$QBhash&urls=$url1" 2>/dev/null)
+        else
+         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/editTracker?hash=$QBhash&origUrl=$url2&newUrl=$url1" 2>/dev/null)
+     fi
+fi
+if [ "$resp" != 200 ]
+    then
+     echo 'An error is occured'
+     return 1
+fi
+return 0
+}
+
+
+
+
+
+# qbtorpeer: List of connected peers of the selected torrent with a short info
+# Usage: qbtorpeer
+
+function qbtorpeer ()
+{
+if [ "x$QBhash" == "x" ]
+then
+echo No torrent is selected
+else
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+fi
+}
+
+# qbtorpeeradd: Add a peer
+# Usage: qbtorpeeradd PEER
+
+function qbtorpeeradd ()
+{
+if [ -z "$QBhash" ]
+    then
+     echo No torrent is selected
+     return 1
+fi
+if [ -z "$1" ]
+    then
+     qbhelp -u qbtorpeeradd
+     return 127
+fi
+local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     if [ "$resp" == 400 ]
+        then
+         echo 'The peer is not valid'
+        else
+         echo 'An error is occured'
+     fi
+     return 1
+fi
+return 0
+}
+
+
+
+
+# qbtorcontent: List the files of the selected torrent with a short info
+# Usage: qbtorcontent [FILE_INDEX_1] [FILE_INDEX_2]
+# qbtorcontent: Without arguments list all files of the selected torrent in the alphabetical order with a short info. 
+# qbtorcontent: If FILE_INDEX1 is indicated then the list starts with this index and finishes at FILE_INDEX2. 
+# qbtorcontent: If no FILE_INDEX2 or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
+
+function qbtorcontent ()
 {
 if [ -z "$QBhash" ]
     then
@@ -847,13 +824,11 @@ fi
 return 0
 }
 
-# qbfileinfo: Get the info of the specified file of the selected torrent
-# qbfileinfo:
-# Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
-# qbfileinfo:
-# qbfileinfo: FILE_INDEX corresponds to the output of qbcontent ()
+# qbtorfile: Get the info of the specified file of the selected torrent
+# Usage: qbtorfile FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
+# qbtorfile: FILE_INDEX corresponds to the output of qbtorcontent
 
-function qbfileinfo ()
+function qbtorfile ()
 {
 if [ -z "$QBhash" ]
     then
@@ -862,14 +837,14 @@ if [ -z "$QBhash" ]
 fi
 if [ -z "$1" ]
     then
-     echo 'Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]'
+     qbhelp -u qbtorfile
      return 127
 fi
 if [ "$2" == "-r" ]
     then
      if [ -z "$3" ] || [ $# -gt 3 ]
         then
-         echo 'Usage: qbfileinfo FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]'
+         qbhelp -u qbtorfile
          return 127
      fi
      curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$3"
@@ -894,13 +869,11 @@ fi
 return 0
 }
 
-# qbfileprio: Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
-# qbfileprio:
-# Usage: qbfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
-# qbfileprio:
-# qbfileprio: FILE_INDEX corresponds to the output of qbcontent ()
+# qbtorfileprio: Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
+# Usage: qbtorfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
+# qbtorfileprio: FILE_INDEX corresponds to the output of qbtorcontent
 
-function qbfileprio ()
+function qbtorfileprio ()
 {
 if [ -z "$QBhash" ]
     then
@@ -909,7 +882,7 @@ if [ -z "$QBhash" ]
 fi
 if [ -z "$1" ]
     then
-     echo Usage: qbfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
+     qbhelp -u qbtorfileprio
      return 127
 fi
 local index=""
@@ -943,4 +916,134 @@ fi
 HISTFILE="$HOME/.qbclient_history"
 HISTCONTROL="ignoreboth:erasedups"
 PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "'
+QBarg=()
+[ -z "$QBarg1" ] || QBarg=("$QBarg1")
+[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
+
+
+
+# Log in to the server
+#
+## Usage: _qblogin [-k] [-p PASSWORD] URL LOGIN
+
+
+
+function _qblogin () {
+if [ ! -z "$QBurl" ]
+    then
+     echo Already authorized
+     return 1
+fi
+local curlopt1
+local curlopt2
+if [ "$1" == "-k" ]
+    then
+     curlopt1="-k"
+     curlopt2=""
+     shift
+    else
+     if [ "$1" == "-c" ]
+        then
+         curlopt1="--cacert"
+         curlopt2="$2"
+         shift
+         shift
+        else
+         curlopt1=""
+         curlopt2=""
+     fi
+fi
+local login
+if [ "$1" == "-l" ]
+    then
+     login="$2"
+     shift
+     shift
+    else
+     login="admin"
+fi
+local password
+if [ "$1" == "-p" ]
+    then
+     password="$2"
+     shift
+     shift
+    else
+     password=""
+fi
+if [ -z "$1" ]
+    then
+     echo 'Usage: qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL'
+     return 127
+fi
+if [ -z "$password" ]
+    then
+     read -rs -p "Password for $login: " password
+     echo
+fi
+QBarg1=$curlopt1
+QBarg2=$curlopt2
+password=$(echo "$password" | jq  -rR @uri)
+login=$(echo "$login" | jq  -rR @uri)
+local exitcode=""
+QBarg=()
+[ -z "$QBarg1" ] || QBarg=("$QBarg1")
+[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
+QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null |
+while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
+exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
+QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
+#QBcookie=$(curl "${QBarg[@]}" -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
+if [ -z "$QBcookie" ]
+    then
+     if [ "$exitcode" == 200 ]
+        then
+         echo "Fail. Invalid username/password"
+         return 126
+        else
+         if [ "$exitcode" == 403 ]
+            then
+             echo "Fail. Your IP is banned"
+             return 126
+            else
+             echo "Fail. Check URL and/or SSL certificate"
+             return 1
+         fi
+     fi
+fi
+QBurl=$1
+QBarg1=$curlopt1
+QBarg2=$curlopt2
 qb_arg_array
+echo Success
+}
+
+# Log out
+## Usage: _qblogout
+
+function _qblogout ()
+{
+if [ -z "$QBurl" ]
+    then
+     echo "Not logged in"
+     return 1
+fi
+local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/auth/logout" 2>/dev/null)
+unset QBurl
+unset QBcookie
+unset QBhash
+unset QBarg1
+unset QBarg2
+unset QBarg
+
+if [ "$exitcode" == 200 ]
+    then
+     echo Logged out
+     return 0
+    else
+     echo 'Warning: logout with the following cookie did not succeed:'
+     echo "$QBcookie"
+     return 1
+    fi
+}
+

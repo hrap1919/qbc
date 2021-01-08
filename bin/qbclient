@@ -1,11 +1,6 @@
 #!/bin/bash
-function qb_arg_array_local ()
-{
-QBarg=()
-[ -z "$QBarg1" ] || QBarg=("$QBarg1")
-[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
-}
-export QBfuncfile=$(dirname "$0")"/../lib/qbclient/qbfunctions"
+
+export BASH_ENV=$(dirname "$0")"/../lib/qbclient/qbfunctions"
 
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
 { [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && shift
@@ -28,74 +23,43 @@ if [ "$1" == "-k" ]
 fi
 if [ "$1" == "-l" ]
     then
-     login="$2"
+     QBlogin="$2"
      shift
      shift
     else
-     login="admin"
+     QBlogin="admin"
 fi
 if [ "$1" == "-p" ]
     then
-     password="$2"
+     QBpassword="$2"
      shift
      shift
     else
-     password=""
+     QBpassword=""
 fi
 if [ -z "$1" ]
     then
      >&2 echo 'Usage: qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...'
      exit 127
 fi
-if [ -z "$password" ]
+if [ -z "$QBpassword" ]
     then
-     read -rs -p "Password for $login: " password
+     read -rs -p "Password for $login: " QBpassword
      echo
 fi
-password=$(echo "$password" | jq  -rR @uri)
-login=$(echo "$login" | jq  -rR @uri)
+QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
+export QBpassword=$(echo "$RANDOM $QBpassword"|base64|gzip|base64)
+export QBlogin=$(echo "$QBlogin" | jq  -rR @uri)
 QBurl="$1"
 shift
 #echo curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login"
-QBhashtmp=""
-loopcode=98
-while [ "$loopcode" == 98 ]
-do
-qb_arg_array_local
-IFS=";"; read exitcode QBcookie <<<$(exitcode="";curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$login&password=$password" "$QBurl/api/v2/auth/login" 2>/dev/null |
-(IFS=" "; while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done))
-#$(curl $QBarg1 $QBarg2 -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
-if [ -z "$QBcookie" ]
-    then
-     if [ "$exitcode" == 200 ]
-        then
-         >&2 echo "Fail. Invalid username/password"
-         exit 126
-        else
-         if [ "$exitcode" == 403 ]
-            then
-             >&2 echo "Fail. Your IP is banned"
-             exit 126
-            else
-             >&2 echo "Fail. Check URL and/or SSL certificate"
-             exit 1
-         fi
-     fi
-fi
-export QBcookie
+QBarg=()
+[ -z "$QBarg1" ] || QBarg=("$QBarg1")
+[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
 export QBarg1
 export QBarg2
-#="SID=$QBcookie"
 export QBurl
-if [ ! -z "$QBhashtmp" ] && [ -f "$QBhashtmp" ]
-    then
-     export QBhash=$(cat "$QBhashtmp" 2>/dev/null)
-     rm -f "$QBhashtmp"
-fi
-export QBhashtmp=$(mktemp -u 2>/dev/null)
-/bin/bash --rcfile $(dirname "$0")"/../lib/qbclient/qbfunctions" "$@"
-loopcode="$?"
-done
-#We do not know if the redefined exit has been already invoked
-curl "${QBarg[@]}" -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null
-builtin exit 0
+/bin/bash "$@" --rcfile "$BASH_ENV" "$@"
+exitcode="$?"
+(curl "${QBarg[@]}" -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null) &
+exit "$exitcode"

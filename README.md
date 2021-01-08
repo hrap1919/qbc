@@ -33,6 +33,8 @@ qbclient usage help
 
 Usage: qbhelp [(list | [-u] FUNCTION)]
 
+Usage: FUNCTION (-h|--help)
+
 Options: 
 
 list - list of available FUNCTIONs
@@ -41,33 +43,27 @@ list - list of available FUNCTIONs
 
 FUNCTION - the help for FUNCTION
 
-#### 2. qbreauth
-
-Re-authorize to the server with the same user/password
-
-Usage: qbreauth 
-
-#### 3. qbversion
+#### 2. qbversion
 
 print the versions of used software
 
-Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness]))]
+Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness])]
 
-#### 4. qbstatus
+#### 3. qbstatus
 
 Get the current status of the server
 
 Usage: qbstatus 
 
-#### 5. qbpref
+#### 4. qbpref
 
-Get the value of specified prefernce property, or print all preferences
+Get the value of specified preference property, or print all preferences
 
 Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 
 With the "-r" option the function returns the raw value of a property
 
-#### 6. qbprefedit
+#### 5. qbprefedit
 
 Send new values of specified preference properties
 
@@ -77,13 +73,13 @@ The option -n prevents an additional check the values from the server after the 
 
 To change the WebUI password by a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
 
-#### 7. qblist
+#### 6. qblist
 
 List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
 
 Usage: qblist 
 
-#### 8. qblistadd
+#### 7. qblistadd
 
 Add a torrent by a URL (use quotes), or by a torrent FILE.
 
@@ -91,7 +87,7 @@ Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1 [ARG_2=VALUE_2 ...]]
 
 The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
-#### 9. qblistdelete
+#### 8. qblistdelete
 
 Delete the selected torrent.
 
@@ -99,11 +95,23 @@ Usage: qblistdelete [-d] INDEX
 
 The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
 
-#### 10. qblistselect
+#### 9. qblistselect
 
-Select the torrent with the specified index from qbinfo ()
+Select the torrent with the specified index from qblist
 
 Usage: qblistselect [-s] [INDEX]
+
+alias qbtorselect=qblistselect
+
+Option -s: silent mode
+
+#### 10. qbtorselect
+
+Select the torrent with the specified index from qblist.
+
+Usage: qbtorselect [-s] [INDEX]
+
+alias qbtorselect=qblistselect
 
 Option -s: silent mode
 
@@ -225,28 +233,11 @@ Usage: qbtorfile FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
 
 FILE_INDEX corresponds to the output of qbtorcontent
 
-#### 25. qbtorfileprio
+#### 25. qbtorfileprioedit
 
 Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
 
-Usage: qbtorfileprio NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
+Usage: qbtorfileprioedit NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
 
 FILE_INDEX corresponds to the output of qbtorcontent
-
-
-#### The file lib/qbclient/qbfunctions
-
-This file can be used without subshelling. Just use
-
-source /path/to/qbfunctions
-
-or 
-
-. /path/to/qbfunctions
-
-to have all these functions in the current shell. Use the function
-
-_qblogin [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL
-
-to authorize and "_qblogout" to log out
 

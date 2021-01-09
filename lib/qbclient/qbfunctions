@@ -480,7 +480,9 @@ if [ "$QBhash" != "$resp" ]
 fi
 local resp=$(curl "${QBarg[@]}" -o /dev/null -w "%{http_code}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$resp&deleteFiles=$deldata" 2>/dev/null)
 if [ "$resp" == "200" ]
-    then return 0
+    then
+     unset QBhash
+     return 0
 fi
 echo "An error is occured"
 return 1

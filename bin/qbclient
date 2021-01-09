@@ -6,60 +6,53 @@ export BASH_ENV=$(dirname "$0")"/../lib/qbclient/qbfunctions"
 { [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && shift
 if [ "$1" == "-k" ]
     then
-     QBarg1="-k"
-     QBarg2=""
+     QB_arg1="-k"
+     QB_arg2=""
      shift
     else
      if [ "$1" == "-c" ]
         then
-         QBarg1="--cacert"
-         QBarg2="$2"
+         QB_arg1="--cacert"
+         QB_arg2="$2"
          shift
          shift
         else
-         QBarg1=""
-         QBarg2=""
+         QB_arg1=""
+         QB_arg2=""
      fi
 fi
+export QB_arg1
+export QB_arg2
 if [ "$1" == "-l" ]
     then
-     QBlogin="$2"
+     QB_login="$2"
      shift
      shift
     else
-     QBlogin="admin"
+     QB_login="admin"
 fi
+export QB_login=$(echo "$QB_login" | jq  -rR @uri)
 if [ "$1" == "-p" ]
     then
-     QBpassword="$2"
+     QB_password="$2"
      shift
      shift
     else
-     QBpassword=""
+     QB_password=""
 fi
 if [ -z "$1" ]
     then
      >&2 echo 'Usage: qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...'
      exit 127
 fi
-if [ -z "$QBpassword" ]
+if [ -z "$QB_password" ]
     then
-     read -rs -p "Password for $login: " QBpassword
+     read -rs -p "Password for $login: " QB_password
      echo
 fi
-QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
-export QBpassword=$(echo "$RANDOM $QBpassword"|base64|gzip|base64)
-export QBlogin=$(echo "$QBlogin" | jq  -rR @uri)
-QBurl="$1"
+export QB_password=$(echo "$QB_password" | jq  -rR @uri)
+export QB_url="$1"
 shift
-#echo curl $QBarg1 $QBarg2 -i --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login"
-QBarg=()
-[ -z "$QBarg1" ] || QBarg=("$QBarg1")
-[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
-export QBarg1
-export QBarg2
-export QBurl
 /bin/bash "$@" --rcfile "$BASH_ENV" "$@"
 exitcode="$?"
-(curl "${QBarg[@]}" -s --cookie $QBcookie "${QBurl}/api/v2/auth/logout" &>/dev/null) &
 exit "$exitcode"

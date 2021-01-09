@@ -16,7 +16,7 @@ function __META_qblogin ()
 {
 local exitcode=""
 local password=$(echo "$QBpassword" | $QBdecode)
-QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$(echo $QBpassword|base64 -d|gzip -d|base64 -d|cut -d' ' -f2)" "$QBurl/api/v2/auth/login" 2>/dev/null |
+QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$QBpassword" "$QBurl/api/v2/auth/login" 2>/dev/null |
 while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
 exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
 QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
@@ -39,6 +39,28 @@ if [ -z "$QBcookie" ]
      fi
 fi
 return 0
+}
+
+
+## qbcurl: Make a custom cURL WebUI request to the qBittorrent server
+## qbcurl: The use of "api/v2" is assumed
+## Usage: qbcurl URL_COMMAND [CURL_OPT_1] [CURL_OPT_2] ...
+## qbcurl: Encapsulate URL_COMMAND symbols in quotes if necessary
+## qbcurl: The "$QBhash" variable can be used in URL_COMMAND to pass the hash of the selected torrent
+## qbcurl: Example: qbcurl "torrents/files?hash=$QBhash" -s | jq
+
+#alias qbcurl="__META_qbcall qbcurl"
+function __META_qbcurl ()
+{
+if [ -z "$1" ]
+    then
+     qbhelp -u qbcurl
+     return 127
+fi
+local command="$1"
+shift
+curl "${QBarg[@]}" --cookie "$QBcookie" "$@" "${QBurl}/api/v2/$command"
+return $?
 }
 
 function __META_qbcall ()
@@ -122,7 +144,7 @@ fi
 }
 
 
-# qbversion: print the versions of used software
+# qbversion: Print the versions of used software
 # Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness])]
 alias qbversion="__META_qbcall qbversion"
 function __META_qbversion ()
@@ -173,7 +195,7 @@ if [ "$resp" == "null" ]
 fi
 }
 
-# qbstatus: Get the current status of the server
+# qbstatus:  Show the current status of the server
 # Usage: qbstatus
 alias qbstatus="__META_qbcall qbstatus"
 function __META_qbstatus ()
@@ -181,7 +203,7 @@ function __META_qbstatus ()
 curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/transfer/info" 2>/dev/null |jq
 }
 
-# qbpref: Get the value of specified preference property, or print all preferences
+# qbpref: Show the value of specified preference property, or print all preferences
 # Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 # qbpref: With the "-r" option the function returns the raw value of a property
 
@@ -337,6 +359,53 @@ if [ "$nocheck" == "false" ]
 fi
 }
 
+
+# qbaltspeed: Get the state of the alternative speed mode
+# Usage: qbaltspeed
+
+alias qbaltspeed="__META_qbcall qbaltspeed"
+function __META_qbaltspeed ()
+{
+local resp=$(__META_qbcurl "transfer/speedLimitsMode" -s 2>/dev/null)
+if [ "$resp" == "0" ]
+    then
+     echo false
+     return 0
+fi
+if [ "$resp" == "1" ]
+    then
+     echo true
+     return 0
+fi
+>&2 echo 'An error is occured'
+return 1
+}
+
+# qbaltspeededit: Set the state of the alternative speed mode
+# Usage: qbaltspeededit (true|false)
+# qbaltspeededit: any nonepty argument except "true" and "false" causes a togglement of the mode
+
+alias qbaltspeededit="__META_qbcall qbaltspeededit"
+function __META_qbaltspeededit ()
+{
+if [ -z "$1" ]
+    then
+     >&2 qbhelp -u qbaltspeededit
+     return 127
+fi
+local resp=$(__META_qbaltspeed)
+[ -z "$resp" ] && return 1
+if [ "$resp" != "$1" ]
+    then
+     resp=$(__META_qbcurl "transfer/toggleSpeedLimitsMode" -o /dev/null -w "%{http_code}" -s 2>/dev/null)
+     [ "$resp" == "200" ] && return 0
+     >&2 echo 'An error is occured'
+     return 1
+fi
+return 0
+}
+
+
 # qblist: List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
 # Usage: qblist
 
@@ -348,7 +417,7 @@ curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=a
 
 
 # qblistadd: Add a torrent by a URL (use quotes), or by a torrent FILE.
-# Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1 [ARG_2=VALUE_2 ...]]
+# Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
 # qblistadd: The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
 alias qblistadd="__META_qbcall qblistadd"
@@ -380,12 +449,12 @@ echo
 }
 
 
-# qblistdelete: Delete the selected torrent.
-# Usage: qblistdelete [-d] INDEX
+# qblistdelete: Remove the selected torrent.
+# Usage: qblistremove [-d] INDEX
 # qblistdelete: The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
 
-alias qblistdelete="__META_qbcall qblistadd"
-function __META_qblistdelete ()
+alias qblistremove="__META_qbcall qblistremove"
+function __META_qblistremove ()
 {
 if [ -z "$QBhash" ]
     then
@@ -409,9 +478,12 @@ if [ "$QBhash" != "$resp" ]
       >&2 echo "The selected hash $QBhash differ for the hash of $1"
       return 1
 fi
-unset QBhash
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$resp&deleteFiles=$deldata"
-echo
+local resp=$(curl "${QBarg[@]}" -o /dev/null -w "%{http_code}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$resp&deleteFiles=$deldata" 2>/dev/null)
+if [ "$resp" == "200" ]
+    then return 0
+fi
+echo "An error is occured"
+return 1
 }
 
 # qblistselect: Select the torrent with the specified index from qblist
@@ -874,19 +946,18 @@ if [ -z "$QBhash" ]
      return 1
 fi
 local arg2
+local filter='(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, "+(.value.availability*100|trunc|tostring)+"% online"'
 if [ -z "$1" ]
     then
      curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
-     jq 'sort_by(.name) |  to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
-     (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+     jq "sort_by(.name) |  to_entries | .[] |$filter"
     else
      if [ -z $2 ]
         then arg2="$1"
         else arg2="$2"
      fi
      curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
-     jq 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+
-     (.value.size /1048576|trunc|tostring)+"Mb, prio:"+(.value.priority|tostring)'
+     jq "sort_by(.name)|to_entries|[.[$1]]+.[$1+1:$arg2+1]|.[]|$filter"
 fi
 return 0
 }
@@ -937,6 +1008,44 @@ fi
 return 0
 }
 
+
+# qbtorfileprio: Show the file priorities of the selected torrent with a short info
+# Usage: qbtorfileprio [-r] [FILE_INDEX_1] [FILE_INDEX_2]
+# qbtorfileprio: The arguments ARG_1 and ARG2 determine an interval of files similarly with qbtorcontent
+# qbtorfileprio: With the "-r" option the function prints only priority values
+alias qbtorfileprio="__META_qbcall qbtorfileprio"
+function __META_qbtorfileprio ()
+{
+if [ -z "$QBhash" ]
+    then
+     >&2 echo "No torrent is selected"
+     return 1
+fi
+local filter
+if [ "$1" == "-r" ]
+    then
+     filter='.value.priority'
+     shift
+    else
+     filter='[{"prio":.value.priority},{"%":(.value.progress*100|trunc)}, (.key|tostring)+". "+.value.name]'
+fi
+local arg2
+if [ -z "$1" ]
+    then
+     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     jq -c 'sort_by(.name) |  to_entries | .[] |'"$filter"
+    else
+     if [ -z $2 ]
+        then arg2="$1"
+        else arg2="$2"
+     fi
+     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     jq -c 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|'"$filter"
+fi
+return 0
+}
+
+
 # qbtorfileprioedit: Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
 # Usage: qbtorfileprioedit NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
 # qbtorfileprioedit: FILE_INDEX corresponds to the output of qbtorcontent
@@ -981,16 +1090,27 @@ if [ "$exitcode" == "200" ]
      return 1
 fi
 }
+
+
+#########################################################################################3=
+#The initialization
+##########################################################################################
+
 shopt -s expand_aliases
 HISTFILE="$HOME/.qbclient_history"
 HISTCONTROL="ignoreboth:erasedups"
 PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "'
-#QBarg=("--cookie" "$QBcookie")
 QBarg=()
-[ -z "$QBarg1" ] || QBarg+=("$QBarg1")
-[ -z "$QBarg2" ] || QBarg+=("$QBarg2")
-unset QBarg1
-unset QBarg2
+[ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
+[ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")
+unset QB_arg1
+unset QB_arg2
+QBlogin="$QB_login"
+unset QB_login
+QBpassword="$QB_password"
+unset QB_password
+QBurl="$QB_url"
+unset QB_url
 __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"

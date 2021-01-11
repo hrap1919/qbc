@@ -11,6 +11,10 @@ In the invoked subshell a number of bash functions are defined which realize a c
 
 qbclient -p 'the_password' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
 
+It is very convenient to use the qbclient installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a pipeline to ssh-command (plus some extra quotation of arguments):
+
+cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8888'" -c "'qblistadd -f -'"
+
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 
 ### Dependencies and compatability
@@ -99,11 +103,17 @@ Add a torrent by a URL (use quotes), or by a torrent FILE.
 
 Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
 
+If FILE='-' then the content of a torrent file will be read from stdin
+
 The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
 #### 10. qblistremove
 
+Remove the selected torrent.
+
 Usage: qblistremove [-d] INDEX
+
+The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
 
 #### 11. qblistselect
 

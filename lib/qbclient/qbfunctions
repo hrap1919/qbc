@@ -75,7 +75,7 @@ if [ "$2" == "-h" ]
         else
          local func="$1"
          shift
-         if [ "$func" != "qbhelp" ] && [ "$(($(date +%s)-$QBchtime))" -ge "5" ]
+         if [ "$func" != "qbhelp" ] && [ "$(($(date +%s)-$QBchtime))" -ge "10" ]
             then
              resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/version" 2>/dev/null)
              if [ "$resp" != "200" ]
@@ -412,26 +412,32 @@ return 0
 alias qblist="__META_qbcall qblist"
 function __META_qblist ()
 {
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq 'to_entries | .[] | (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" 2>/dev/null |jq 'to_entries | .[] |
+(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
 
 # qblistadd: Add a torrent by a URL (use quotes), or by a torrent FILE.
 # Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
+# qblistadd: If FILE='-' then the content of a torrent file will be read from stdin
 # qblistadd: The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
 alias qblistadd="__META_qbcall qblistadd"
 function __META_qblistadd ()
 {
 local datarray=("${QBarg[@]}")
-local tmptorrent=""
+datarray+=("-o" "/dev/null" "-w" "%{http_code}" "-s" "--cookie" "$QBcookie")
+local farg=""
 if [ "$1" == "-u" ]
     then
      datarray+=("-F" "urls=$2")
+     farg="/dev/null"
     else
+     local arg2=$(echo "$2"| jq -rR '@uri')
      if [ "$1" == "-f" ]
         then
-         datarray+=("-F" "torrents=@$2")
+         datarray+=("-F" "torrents=@-")
+         farg="$2"
         else
          >&2 qbhelp -u qblistadd
          return 127
@@ -444,14 +450,51 @@ while [ ! -z "$1" ]
      datarray+=("-F" "$1")
      shift
     done
-curl "${datarray[@]}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/add"
-echo
+local oldinfo=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" 2>/dev/null)
+if [ -z "$oldinfo" ]
+    then
+     >&2 echo 'An error is occured'
+     return 1
+fi
+local resp
+if [ "$farg" == '-' ]
+    then
+     resp=$(curl "${datarray[@]}" "${QBurl}/api/v2/torrents/add" 2>/dev/null)
+    else
+     resp=$(curl "${datarray[@]}" "${QBurl}/api/v2/torrents/add" 2>/dev/null <"$farg")
+fi
+if [ "$resp" != "200" ]
+    then
+      >&2 echo 'An error is occured.'
+     return 1
+fi
+local newinfo=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" 2>/dev/null)
+if [ -z "$newinfo" ]
+    then
+      >&2 echo 'An error is occured. Please check the success of the operation manually'
+     return 1
+fi
+local diff=$(jq -rn --argjson j "$oldinfo" --argjson jj "$newinfo" '([$jj|.[]|.hash])-([$j|.[]|.hash])|if (.|length)==1 then (.[0]) else . end')
+if [ "$diff" == '[]' ]
+    then
+      >&2 echo 'Warning: No new torrent is added'
+     return 0
+fi
+if [ "${diff:0:1}" == '[' ]
+    then
+      >&2 echo 'Warning: More than one torrents were added recently. Please check them manually'
+     return 0
+fi
+QBhash="$diff"
+echo "Torrent with hash="$QBhash" is added"
+jq -n --arg hash "$QBhash" --argjson jj "$newinfo" '$jj|.[]|select(.hash==$hash)|
+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 }
 
 
-# qblistdelete: Remove the selected torrent.
+# qblistremove: Remove the selected torrent.
 # Usage: qblistremove [-d] INDEX
-# qblistdelete: The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
+# qblistremove: The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
 
 alias qblistremove="__META_qbcall qblistremove"
 function __META_qblistremove ()
@@ -515,8 +558,9 @@ QBhash=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/in
 fi
 if [ "x$silent" == "x" ]
 then
-echo Torrent with hash="$QBhash" is selected
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] | .name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+echo "Torrent with hash="$QBhash" is selected"
+curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq '.[] |
+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 fi
 fi
 }

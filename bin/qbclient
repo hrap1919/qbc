@@ -47,7 +47,7 @@ if [ -z "$1" ]
 fi
 if [ -z "$QB_password" ]
     then
-     read -rs -p "Password for $login: " QB_password
+     read -rs -p "Password for $QB_login: " QB_password
      echo
 fi
 export QB_password=$(echo "$QB_password" | jq  -rR @uri)

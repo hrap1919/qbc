@@ -9,11 +9,13 @@ The option -k implies an insecure https connection. The option -c is for pointin
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
 
-qbclient -p 'the_password' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
+qbclient -p 'adminadmin' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
 
-It is very convenient to use the qbclient installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a pipeline to ssh-command (plus some extra quotation of arguments):
+It is very convenient to use the qbclient installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a stdin redirection of ssh-command:
 
-cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8888'" -c "'qblistadd -f -'"
+ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qblistadd -f -'" <filename.torrent
+
+(or) cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qblistadd -f -'"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

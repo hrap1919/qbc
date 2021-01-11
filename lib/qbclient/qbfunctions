@@ -12,14 +12,24 @@ builtin exit "$exitcode"
 }
 
 
+function __META_qbloginq ()
+{
+local exitcode=""
+QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$QBpassword" "$QBurl/api/v2/auth/login" 2>/dev/null |
+while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
+exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
+QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
+}
+
+
 function __META_qblogin ()
 {
 local exitcode=""
 local password=$(echo "$QBpassword" | $QBdecode)
 QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$QBpassword" "$QBurl/api/v2/auth/login" 2>/dev/null |
-while read line1 line2 line3; do [ -z $exitcode ] && { exitcode=$line2; printf "$line2;"; }; [ $line1 == "set-cookie:" ] && printf $line2; done)
-exitcode=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line1 ) )
-QBcookie=$(echo $QBcookie | ( IFS=";"; read line1 line2; echo $line2 ) )
+while read line1 line2 line3; do [ -z "$exitcode" ] && { exitcode="$line2"; printf "$line2;"; }; [ "$line1" == "set-cookie:" ] && printf "$line2"; done)
+exitcode=$(echo "$QBcookie" | ( IFS=";"; read line1 line2; echo $line1 ) )
+QBcookie=$(echo "$QBcookie" | ( IFS=";"; read line1 line2; echo $line2 ) )
 #QBcookie=$(curl "${QBarg[@]}" -c - --header "Referer: $1" --data "username=$login&password=$password" "$1/api/v2/auth/login" 2>/dev/null | cut -sf7)
 if [ -z "$QBcookie" ]
     then

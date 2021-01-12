@@ -364,7 +364,7 @@ if [ "$silent" == "false" ]
          return 1
      fi
 fi
-resp=$(__META_qbrequest -e "$app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
+resp=$(__META_qbrequest -e "app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      >&2 echo 'An error is occured'

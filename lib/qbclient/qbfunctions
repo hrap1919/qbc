@@ -469,7 +469,7 @@ if [ "$1" == "-u" ]
      if [ "$2" == "-" ]
         then
          echo 'Paste the url and press Enter:'
-         read uarg
+         read -r uarg
         else
          uarg="$2"
      fi
@@ -771,8 +771,8 @@ if [ $# -lt 1 ]
          fi
          local oldse=$(echo "$oldval" | jq -r '.[0]')
          local oldfl=$(echo "$oldval" | jq -r '.[1]')
-         [ "$se" == "$oldse" ] || __META_qbrequest "torrents/toggleSequentialDownload?hashes=$QBhash" -s
-         [ "$fl" == "$oldfl" ] || __META_qbrequest "torrents/toggleFirstLastPiecePrio?hashes=$QBhash" -s
+         [ "$se" == "$oldse" ] || __META_qbrequest "torrents/toggleSequentialDownload?hashes=$QBhash" >/dev/null
+         [ "$fl" == "$oldfl" ] || __META_qbrequest "torrents/toggleFirstLastPiecePrio?hashes=$QBhash" >/dev/null
      fi
 fi
 }

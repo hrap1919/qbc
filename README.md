@@ -55,13 +55,7 @@ Print the versions of used software
 
 Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness])]
 
-#### 3. qbstatus
-
-Show the current status of the server
-
-Usage: qbstatus 
-
-#### 4. qbpref
+#### 3. qbpref
 
 Show the value of specified preference property, or print all preferences
 
@@ -69,7 +63,7 @@ Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 
 With the "-r" option the function returns the raw value of a property
 
-#### 5. qbprefedit
+#### 4. qbprefedit
 
 Send new values of specified preference properties
 
@@ -79,19 +73,25 @@ The option -n prevents an additional check the values from the server after the 
 
 To change the WebUI password by a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
 
-#### 6. qbaltspeed
+#### 5. qbaltspeed
 
 Get the state of the alternative speed mode
 
 Usage: qbaltspeed 
 
-#### 7. qbaltspeededit
+#### 6. qbaltspeededit
 
 Set the state of the alternative speed mode
 
 Usage: qbaltspeededit (true|false)
 
 any nonepty argument except "true" and "false" causes a togglement of the mode
+
+#### 7. qbnetwork
+
+Show the general network status of the server
+
+Usage: qbnetwork 
 
 #### 8. qblist
 
@@ -117,13 +117,13 @@ Usage: qblistremove [-d] INDEX
 
 The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
 
-#### 11. qblistselect
+#### 11. qbselect
 
 Select the torrent with the specified index from qblist
 
-Usage: qblistselect [-s] [INDEX]
+Usage: qbselect [-s] [INDEX]
 
-alias qbtorselect=qblistselect
+alias qbtorselect=qbselect
 
 Option -s: silent mode
 
@@ -133,7 +133,7 @@ Select the torrent with the specified index from qblist.
 
 Usage: qbtorselect [-s] [INDEX]
 
-alias qbtorselect=qblistselect
+alias qbtorselect=qbselect
 
 Option -s: silent mode
 

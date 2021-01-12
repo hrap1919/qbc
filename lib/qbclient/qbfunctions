@@ -14,8 +14,7 @@ builtin exit "$exitcode"
 function __META_qblogin ()
 {
 local exitcode=""
-local password=$(echo "$QBpassword" | $QBdecode)
-QBcookie=$(curl "${QBarg[@]}" -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$QBpassword" "$QBurl/api/v2/auth/login" 2>/dev/null |
+QBcookie=$(curl "${QBarg[@]}" -s -i --header "Referer: $QBurl" --data "username=$QBlogin&password=$QBpassword" "$QBurl/api/v2/auth/login" 2>/dev/null |
 while read line1 line2 line3; do [ -z "$exitcode" ] && { exitcode="$line2"; printf "$line2;"; }; [ "$line1" == "set-cookie:" ] && printf "$line2"; done)
 exitcode=$(echo "$QBcookie" | ( IFS=";"; read line1 line2; echo $line1 ) )
 QBcookie=$(echo "$QBcookie" | ( IFS=";"; read line1 line2; echo $line2 ) )
@@ -62,6 +61,42 @@ curl "${QBarg[@]}" --cookie "$QBcookie" "$@" "${QBurl}/api/v2/$command"
 return $?
 }
 
+function __META_qbrequest ()
+{
+local opt="raw"
+if [ "$1" == "-e" ]
+    then
+     opt="code"
+     shift
+fi
+local method="$1"
+shift
+local resp
+if [ "$opt" == "raw" ]
+    then
+     resp=$(__META_qbcurl "$method" -s "$@")
+     if [ "$resp" == "Forbidden" ]
+        then
+         __META_qblogin
+         resp=$?
+         [ "$resp" == "0" ] || builtin exit "$resp"
+         resp=$(__META_qbcurl "$method" -s "$@")
+     fi
+    else
+     resp=$(__META_qbcurl "$method" -s -o /dev/null -w "%{http_code}" "$@")
+     if [ "$resp" == "403" ]
+        then
+         __META_qblogin
+         resp=$?
+         [ "$resp" == "0" ] || builtin exit "$resp"
+         resp=$(__META_qbcurl "$method" -s -o /dev/null -w "%{http_code}" "$@")
+     fi
+fi
+echo "$resp"
+return 0
+}
+
+
 function __META_qbcall ()
 {
 if [ "$2" == "-h" ]
@@ -74,24 +109,21 @@ if [ "$2" == "-h" ]
         else
          local func="$1"
          shift
-         if [ "$func" != "qbhelp" ] && [ "$(($(date +%s)-$QBchtime))" -ge "10" ]
-            then
-             resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/version" 2>/dev/null)
-             if [ "$resp" != "200" ]
-                then
-                 __META_qblogin
-                 exitcode=$?
-                 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
-             fi
-             QBchtime=$(date +%s)
-         fi
+         #if [ "$func" != "qbhelp" ] && [ "$(($(date +%s)-$QBchtime))" -ge "10" ]
+            #then
+             #resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/version" 2>/dev/null)
+             #if [ "$resp" != "200" ]
+                #then
+                 #__META_qblogin
+                 #exitcode=$?
+                 #[ "$exitcode" == "0" ] || builtin exit "$exitcode"
+             #fi
+             #QBchtime=$(date +%s)
+         #fi
          "__META_$func" "$@"
      fi
 fi
 }
-
-
-
 
 # qbhelp: qbclient usage help
 # Usage: qbhelp [(list | [-u] FUNCTION)]
@@ -156,16 +188,16 @@ fi
 resp="null"
 if [ "$1" == "app" ]
     then
-     resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/app/version" 2>/dev/null)
+     resp=$(__META_qbrequest "app/version" 2>/dev/null)
     else
      if [ "$1" == "api" ]
       then
-      resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/webapiVersion" 2>/dev/null)
+      resp=$(__META_qbrequest "app/webapiVersion" 2>/dev/null)
      fi
 fi
 if [ "$1" == "build" ]
     then
-     resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/buildInfo" 2>/dev/null)
+     resp=$(__META_qbrequest "app/buildInfo" 2>/dev/null)
      if [ -z "$resp" ]
         then
          >&2 echo 'An error is occured'
@@ -194,14 +226,6 @@ if [ "$resp" == "null" ]
 fi
 }
 
-# qbstatus:  Show the current status of the server
-# Usage: qbstatus
-alias qbstatus="__META_qbcall qbstatus"
-function __META_qbstatus ()
-{
-curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/transfer/info" 2>/dev/null |jq
-}
-
 # qbpref: Show the value of specified preference property, or print all preferences
 # Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 # qbpref: With the "-r" option the function returns the raw value of a property
@@ -216,12 +240,12 @@ if [ "$1" == "-r" ]
          >&2 qbhelp -u qbpref
          return 127
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq -r ".$2"
+     __META_qbrequest "app/preferences" 2>/dev/null | jq -r ".$2"
      return 0
 fi
 if [ -z "$1" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq
+     __META_qbrequest "app/preferences" 2>/dev/null | jq
     else
      local jj='{"'"$1"'":.'"$1"
      shift
@@ -231,10 +255,11 @@ if [ -z "$1" ]
          shift
      done
      jj="$jj"'}'
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" | jq "$jj"
+     __META_qbrequest "app/preferences" 2>/dev/null | jq "$jj"
 fi
 return 0
 }
+
 
 # qbprefedit: Send new values of specified preference properties
 # Usage: qbprefedit [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
@@ -280,7 +305,7 @@ fi
 if [ "$newpasswd" == "$newpasswd1" ]
     then
      newpasswd='json='$(echo {} | jq --arg pass "$newpasswd" '{ "web_ui_password": $pass }')
-     local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
+     local resp=$(__META_qbrequest -e "app/setPreferences" --data-urlencode "$newpasswd" 2>/dev/null)
      if [ "$resp" != "200" ]
         then
          [ "$silent" == "true" ] || >&2 echo 'An error is occured'
@@ -294,7 +319,7 @@ if [ "$newpasswd" == "$newpasswd1" ]
      return 1
 fi
 fi
-local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences" 2>/dev/null)
+local pref=$(__META_qbrequest "app/preferences" 2>/dev/null)
 if [ -z "$pref" ]
     then
      >&2 echo 'An error is occured'
@@ -339,7 +364,7 @@ if [ "$silent" == "false" ]
          return 1
      fi
 fi
-resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie $QBcookie "${QBurl}/api/v2/app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
+resp=$(__META_qbrequest -e "$app/setPreferences" --data-urlencode "json=$j" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      >&2 echo 'An error is occured'
@@ -347,7 +372,7 @@ if [ "$resp" != "200" ]
 fi
 if [ "$nocheck" == "false" ]
     then
-     local pref=$(curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/app/preferences")
+     local pref=$(__META_qbrequest "app/preferences" -s)
      echo 'Just checked preferences:'
      echo $pref| jq $jj 2>/dev/null
     else
@@ -358,14 +383,13 @@ if [ "$nocheck" == "false" ]
 fi
 }
 
-
 # qbaltspeed: Get the state of the alternative speed mode
 # Usage: qbaltspeed
 
 alias qbaltspeed="__META_qbcall qbaltspeed"
 function __META_qbaltspeed ()
 {
-local resp=$(__META_qbcurl "transfer/speedLimitsMode" -s 2>/dev/null)
+local resp=$(__META_qbrequest "transfer/speedLimitsMode" 2>/dev/null)
 if [ "$resp" == "0" ]
     then
      echo false
@@ -396,7 +420,7 @@ local resp=$(__META_qbaltspeed)
 [ -z "$resp" ] && return 1
 if [ "$resp" != "$1" ]
     then
-     resp=$(__META_qbcurl "transfer/toggleSpeedLimitsMode" -o /dev/null -w "%{http_code}" -s 2>/dev/null)
+     resp=$(__META_qbrequest -e "transfer/toggleSpeedLimitsMode" 2>/dev/null)
      [ "$resp" == "200" ] && return 0
      >&2 echo 'An error is occured'
      return 1
@@ -405,13 +429,25 @@ return 0
 }
 
 
+
+# qbnetwork:  Show the general network status of the server
+# Usage: qbnetwork
+alias qbnetwork="__META_qbcall qbnetwork"
+function __META_qbnetwork ()
+{
+__META_qbrequest "transfer/info" 2>/dev/null |jq
+}
+
+
+
+
 # qblist: List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
 # Usage: qblist
 
 alias qblist="__META_qbcall qblist"
 function __META_qblist ()
 {
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" 2>/dev/null |jq 'to_entries | .[] |
+__META_qbrequest "torrents/info?sort=added_on" 2>/dev/null |jq 'to_entries | .[] |
 (.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, state:"+.value.state'
 }
 
@@ -425,7 +461,7 @@ alias qblistadd="__META_qbcall qblistadd"
 function __META_qblistadd ()
 {
 local datarray=("${QBarg[@]}")
-datarray+=("-o" "/dev/null" "-w" "%{http_code}" "-s" "--cookie" "$QBcookie")
+datarray+=("-s" "-o" "/dev/null" "-w" "%{http_code}" "--cookie" "$QBcookie")
 local farg=""
 if [ "$1" == "-u" ]
     then
@@ -466,7 +502,7 @@ while [ ! -z "$1" ]
      datarray+=("-F" "$1")
      shift
     done
-local oldinfo=$(__META_qbcurl 'torrents/info?sort=added_on' -s 2>/dev/null)
+local oldinfo=$(__META_qbrequest 'torrents/info?sort=added_on' 2>/dev/null)
 local resp
 if [ "$farg" == '-' ]
     then
@@ -479,7 +515,7 @@ if [ "$resp" != "200" ]
       >&2 echo 'An error is occured.'
      return 1
 fi
-local newinfo=$(__META_qbcurl 'torrents/info?sort=added_on' -s 2>/dev/null)
+local newinfo=$(__META_qbrequest 'torrents/info?sort=added_on' 2>/dev/null)
 local diff=$(jq -rn --argjson j "$oldinfo" --argjson jj "$newinfo" '([$jj|.[]|.hash])-([$j|.[]|.hash])|if (.|length)==1 then (.[0]) else . end')
 if [ "$diff" == '[]' ]
     then
@@ -521,13 +557,13 @@ if [ -z "$1" ]
      >&2 qbhelp -u qblistdelete
      return 127
 fi
-local resp=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?sort=added_on" | jq -r ".[$1].hash" 2>/dev/null)
+local resp=$(__META_qbrequest "torrents/info?sort=added_on" 2>/dev/null | jq -r ".[$1].hash" 2>/dev/null)
 if [ "$QBhash" != "$resp" ]
      then
       >&2 echo "The selected hash $QBhash differ for the hash of $1"
       return 1
 fi
-local resp=$(curl "${QBarg[@]}" -o /dev/null -w "%{http_code}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/delete?hashes=$resp&deleteFiles=$deldata" 2>/dev/null)
+local resp=$(__META_qbrequest -e "torrents/delete?hashes=$resp&deleteFiles=$deldata" 2>/dev/null)
 if [ "$resp" == "200" ]
     then
      unset QBhash
@@ -537,13 +573,22 @@ echo "An error is occured"
 return 1
 }
 
-# qblistselect: Select the torrent with the specified index from qblist
-# Usage: qblistselect [-s] [INDEX]
-# Usage:qblistselect alias qbtorselect=qblistselect
-# qblistselect: Option -s: silent mode
+## qbtlistselect: Select the torrent with the specified index from qblist.
+## Usage: qblistselect [-s] [INDEX]
+## Usage:qblistselect alias qblistselect=qbselect
+## qbtorselect: Option -s: silent mode
 
-alias qblistselect="__META_qbcall qblistselect"
-function __META_qblistselect ()
+#alias qblistselect=qbselect
+
+
+# qbselect: Select the torrent with the specified index from qblist
+# Usage: qbselect [-s] [INDEX]
+# Usage:qbselect alias qbtorselect=qbselect
+## Usage:qbselect alias qblistselect=qbselect
+# qbselect: Option -s: silent mode
+
+alias qbselect="__META_qbcall qbselect"
+function __META_qbselect ()
 {
 local silent
 if  [ "$1" == "-s" ]
@@ -561,7 +606,7 @@ fi
 resp=""
 if [ ! -z "$1" ]
     then
-     resp=$(__META_qbcurl 'torrents/info?sort=added_on' -s 2>/dev/null)
+     resp=$(__META_qbrequest 'torrents/info?sort=added_on' 2>/dev/null)
      QBhash=$(echo "$resp" | jq -r ".[$1].hash")
 fi
 echo "Torrent with hash="$QBhash" is selected"
@@ -570,7 +615,7 @@ if [  -z "$silent" ]
     then
      if [ -z "$resp" ]
         then
-         __META_qbcurl "torrents/info?hashes=$QBhash" -s 2>/dev/null| jq '.[] |'"$filter"
+         __META_qbrequest "torrents/info?hashes=$QBhash" 2>/dev/null| jq '.[] |'"$filter"
         else
          echo "$resp" | jq --arg qbhash "$QBhash" '.[]|select(.hash==$qbhash)'"$filter"
      fi
@@ -579,10 +624,10 @@ fi
 
 # qbtorselect: Select the torrent with the specified index from qblist.
 # Usage: qbtorselect [-s] [INDEX]
-# Usage:qbtorselect alias qbtorselect=qblistselect
+# Usage:qbtorselect alias qbtorselect=qbselect
 # qbtorselect: Option -s: silent mode
 
-alias qbtorselect=qblistselect
+alias qbtorselect=qbselect
 
 
 # qbtordo: Pause, resume, recheck and reannounce of the selected torrent
@@ -600,7 +645,7 @@ if [ -z "$1" ]
      >&2 qbhelp -u qbtordo
      return 127
 fi
-local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/$1?hashes=$QBhash" 2>/dev/null)
+local resp=$(__META_qbrequest -e "torrents/$1?hashes=$QBhash" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      >&2 echo 'An error is occured'
@@ -628,12 +673,12 @@ if [ "$1" == "-r" ]
          >&2 qbhelp -u qbtorinfo
          return 127
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -r ".[]|.$2"
+     __META_qbrequest "torrents/info?hashes=$QBhash" 2>/dev/null | jq -r ".[]|.$2"
      return 0
 fi
 if [ -z "$1" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq ".[]"
+     __META_qbrequest "torrents/info?hashes=$QBhash" 2>/dev/null | jq
     else
      local jj='{"'"$1"'":.'"$1"
      shift
@@ -643,7 +688,7 @@ if [ -z "$1" ]
          shift
      done
      jj="$jj"'}'
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq ".[]|$jj"
+     __META_qbrequest "torrents/info?hashes=$QBhash" 2>/dev/null | jq ".[]|$jj"
 fi
 return 0
 }
@@ -674,7 +719,7 @@ then
 return 1
 else
 local arg=$(echo $1|jq -rR '@uri')
-resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/setLocation?hashes=$QBhash&location=$arg" 2>/dev/null)
+resp=$(__META_qbrequest -e "torrents/setLocation?hashes=$QBhash&location=$arg" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      >&2 echo 'An error is occured'
@@ -718,7 +763,7 @@ if [ $# -lt 1 ]
          if [ $# -gt 1 ]
             then fl="$2"
          fi
-         local oldval=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/info?hashes=$QBhash" | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]' 2>/dev/null)
+         local oldval=$(__META_qbrequest "torrents/info?hashes=$QBhash" 2>/dev/null | jq -rc '.[] | [ .seq_dl, .f_l_piece_prio ]' 2>/dev/null)
          if [ -z "$oldval" ]
             then
              >&2 echo 'An error is occured'
@@ -726,8 +771,8 @@ if [ $# -lt 1 ]
          fi
          local oldse=$(echo "$oldval" | jq -r '.[0]')
          local oldfl=$(echo "$oldval" | jq -r '.[1]')
-         [ "$se" == "$oldse" ] || curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleSequentialDownload?hashes=$QBhash"
-         [ "$fl" == "$oldfl" ] || curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/toggleFirstLastPiecePrio?hashes=$QBhash"
+         [ "$se" == "$oldse" ] || __META_qbrequest "torrents/toggleSequentialDownload?hashes=$QBhash" -s
+         [ "$fl" == "$oldfl" ] || __META_qbrequest "torrents/toggleFirstLastPiecePrio?hashes=$QBhash" -s
      fi
 fi
 }
@@ -767,14 +812,14 @@ if [ "$1" == "-n" ]
 fi
 if [ "$1" == "-o" ]
     then
-     local pi=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+     local pi=$(__META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq --arg i "$2" 'sort_by(.name)|.[($i|tonumber)].piece_range')
      if [ -z "$aone" ]
         then
-         curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
          jq -r --argjson pi "$pi" '.[$pi|.[0]:($pi|.[1])+1]|[.[]|if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
         else
-         curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+         __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
          jq -r --argjson pi "$pi" --arg aone "$aone" '.[$pi|.[0]:($pi|.[1])+1]|
          length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
          [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
@@ -789,15 +834,15 @@ if [ "$1" == "-o" ]
             then
              arg3="$2"
          fi
-         pi=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash"|
+         pi=$(__META_qbrequest "torrents/files?hash=$QBhash"  2>/dev/null |
          jq -c --arg i "$2" --arg j "$arg3" 'sort_by(.name) as $inp|reduce range($i|tonumber;($j|tonumber)+1) as $n ([];.+[($inp|.[$n]).piece_range|range(.[0];.[1]+1)]|unique)')
          if [ -z "$aone" ]
             then
-             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
              jq -r --argjson pi "$pi" '. as $inp|length as $len| [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end|
              if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
             else
-             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash"|
+             __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
              jq -r --argjson pi "$pi" --arg aone "$aone" '. as $inp|length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|
              [range($len)| . as $i|if ($pi|index($i))==null then 3 else ($inp|.[$i]) end]|
              [.[] as $n|(range($mult)|$n)]|
@@ -808,11 +853,11 @@ if [ "$1" == "-o" ]
         else
          if [ -z "$aone" ]
             then
-             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
              jq -r '[.[]|
              if .==0 then "-" else if .==1 then "v" else if .==2 then "#" else "." end end end]|add'
             else
-             curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/pieceStates?hash=$QBhash" |
+             __META_qbrequest "torrents/pieceStates?hash=$QBhash" 2>/dev/null |
              jq -r --arg aone "$aone" 'length as $len|($aone|tonumber) as $size|(-(-$size/$len|floor)) as $mult|[.[] as $n|(range($mult)|$n)]|
              [to_entries |[.[]|{"a":(.key*$size/($len*$mult)|trunc),"b":.value}]|group_by(.a)|.[]|[.[].b]|
              reduce .[] as $n (4;if .==4 then if $n==0 then 0 else $n+1 end else if $n==1 then 2 else if (.==3 and $n==0) or (.==0 and $n==2) then 1 else . end end end)|
@@ -850,12 +895,12 @@ if [ "$1" == "-r" ]
          >&2 qbhelp -u qbtorgeneral
          return 127
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq -r ".$2"
+     __META_qbrequest "torrents/properties?hash=$QBhash" 2>/dev/null| jq -r ".$2"
      return 0
 fi
 if [ -z "$1" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq
+     __META_qbrequest "torrents/properties?hash=$QBhash" 2>/dev/null | jq
     else
      local jj='{"'"$1"'":.'"$1"
      shift
@@ -865,7 +910,7 @@ if [ -z "$1" ]
          shift
      done
      jj="$jj"'}'
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/properties?hash=$QBhash" | jq "$jj"
+     __META_qbrequest "torrents/properties?hash=$QBhash" 2>/dev/null | jq "$jj"
 fi
 return 0
 }
@@ -883,7 +928,7 @@ if [ -z "$QBhash" ]
 then
 >&2 echo 'No torrent is selected'
 else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/trackers?hash=$QBhash" |
+__META_qbrequest "torrents/trackers?hash=$QBhash" 2>/dev/null |
 jq '.[]|.url+" ("+
 (.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
 "), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)'
@@ -919,14 +964,14 @@ if [ "$1" == "-d" ]
        >&2 qbhelp -u qbtortrackedit
        return 127
       else
-       resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/removeTrackers?hash=$QBhash&urls=$url2" 2>/dev/null)
+       resp=$(__META_qbrequest -e "torrents/removeTrackers?hash=$QBhash&urls=$url2" 2>/dev/null)
      fi
     else
      if [ -z "$2" ]
         then
-         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addTrackers?hash=$QBhash&urls=$url1" 2>/dev/null)
+         resp=$(__META_qbrequest -e "torrents/addTrackers?hash=$QBhash&urls=$url1" 2>/dev/null)
         else
-         resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/editTracker?hash=$QBhash&origUrl=$url2&newUrl=$url1" 2>/dev/null)
+         resp=$(__META_qbrequest -e "torrents/editTracker?hash=$QBhash&origUrl=$url2&newUrl=$url1" 2>/dev/null)
      fi
 fi
 if [ "$resp" != 200 ]
@@ -947,12 +992,13 @@ return 0
 alias qbtorpeer="__META_qbcall qbtorpeer"
 function __META_qbtorpeer ()
 {
-if [ "x$QBhash" == "x" ]
+if [ -z "$QBhash" ]
 then
 >&2 echo No torrent is selected
 return 1
 else
-curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] | (.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+__META_qbrequest "sync/torrentPeers?hash=$QBhash" 2>/dev/null| jq '[.peers | .[]] | sort_by(.progress) |.[] |
+(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 fi
 }
 
@@ -972,7 +1018,7 @@ if [ -z "$1" ]
      >&2 qbhelp -u qbtorpeeradd
      return 127
 fi
-local resp=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
+local resp=$(__META_qbrequest -e "torrents/addPeers?hashes=$QBhash&peers=$1" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      if [ "$resp" == 400 ]
@@ -1007,14 +1053,14 @@ local arg2
 local filter='(.key|tostring)+". "+.value.name+", "+(.value.progress*100|trunc|tostring)+"% of "+(.value.size /1048576|trunc|tostring)+"Mb, "+(.value.availability*100|trunc|tostring)+"% online"'
 if [ -z "$1" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq "sort_by(.name) |  to_entries | .[] |$filter"
     else
      if [ -z $2 ]
         then arg2="$1"
         else arg2="$2"
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq "sort_by(.name)|to_entries|[.[$1]]+.[$1+1:$arg2+1]|.[]|$filter"
 fi
 return 0
@@ -1044,12 +1090,12 @@ if [ "$2" == "-r" ]
          >&2 qbhelp -u qbtorfile
          return 127
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -rc 'sort_by(.name)|.['"$1"']|.'"$3"
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null | jq -rc 'sort_by(.name)|.['"$1"']|.'"$3"
      return 0
 fi
 if [ -z "$2" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$1"']'
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null | jq 'sort_by(.name)|.['"$1"']'
     else
      local j="$1"
      shift
@@ -1061,7 +1107,7 @@ if [ -z "$2" ]
          shift
      done
      jj="$jj"'}'
-     curl "${QBarg[@]}" -s --cookie "$QBcookie"  "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq 'sort_by(.name)|.['"$j"']|'"$jj"
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null | jq 'sort_by(.name)|.['"$j"']|'"$jj"
 fi
 return 0
 }
@@ -1090,14 +1136,14 @@ fi
 local arg2
 if [ -z "$1" ]
     then
-     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq -c 'sort_by(.name) |  to_entries | .[] |'"$filter"
     else
      if [ -z $2 ]
         then arg2="$1"
         else arg2="$2"
      fi
-     curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     __META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq -c 'sort_by(.name)|to_entries|[.['"$1"']]+.['"$1"'+1:'"$arg2"'+1]|.[]|'"$filter"
 fi
 return 0
@@ -1125,13 +1171,13 @@ local index=""
 local arg3
 if [ -z "$2" ]
     then
-     index=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add' 2>/dev/null)
+     index=$(__META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null | jq -r '["0"]+[range(1;length)|tostring|"|"+.]|add' 2>/dev/null)
     else
      if [ -z $3 ]
         then arg3="$2"
         else arg3="$3"
      fi
-     index=$(curl "${QBarg[@]}" -s --cookie "$QBcookie" "${QBurl}/api/v2/torrents/files?hash=$QBhash" |
+     index=$(__META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null |
      jq -r '[ .[] | .name ] | to_entries | sort_by(.value) | [(.['"$2"'].key|tostring)]+ [.['"$2"'+1:'"$arg3"'+1] | "|"+(.[].key|tostring)]|add' 2>/dev/null)
 fi
 if [ -z "$index" ]
@@ -1139,7 +1185,7 @@ if [ -z "$index" ]
      >&2 echo "An error is occured"
      return 1
 fi
-local exitcode=$(curl "${QBarg[@]}" -s -o /dev/null -w "%{http_code}" --cookie "$QBcookie" "${QBurl}/api/v2/torrents/filePrio?hash=$QBhash&id=$index&priority=$1" 2>/dev/null)
+local exitcode=$(__META_qbrequest -e "torrents/filePrio?hash=$QBhash&id=$index&priority=$1" 2>/dev/null)
 if [ "$exitcode" == "200" ]
     then return 0
     else
@@ -1173,4 +1219,4 @@ __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
 unset exitcode
-QBchtime=$(date +%s)
+#QBchtime=$(date +%s)

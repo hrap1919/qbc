@@ -693,13 +693,88 @@ fi
 return 0
 }
 
+
+# qbtorinfodownloadlimit: Show the download limit of the selected torrent in Kb/s
+# Usage: qbtorinfodownloadlimit
+
+alias qbtorinfodownloadlimit="__META_qbcall qbtorinfodownloadlimit"
+function __META_qbtorinfodownloadlimit ()
+{
+qbtorinfo dl_limit | jq -r '.dl_limit|if .>0 then (./1024|trunc) else . end'
+return $?
+}
+
+# qbtorinfodownloadlimitedit: Set a new save location of the selected torrent
+# Usage: qbtorinfodownloadlimit NEW_LIMIT
+alias qbtorinfodownloadlimitedit="__META_qbcall qbtorinfodownloadlimitedit"
+function __META_qbtorinfodownloadlimitedit ()
+{
+if [ -z "$QBhash"  ]
+then
+>&2 echo No torrent is selected
+return 1
+else
+if [ -z "$1" ]
+then
+>&2 qbhelp -u qbtorinfodownloadlimitedit
+return 1
+else
+local arg=$(jq -rn "$1|if .<0 then -1 else .*1024 end")
+resp=$(__META_qbrequest -e "torrents/setDownloadLimit?hashes=$QBhash&limit=$arg" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     >&2 echo 'An error is occured'
+     return 1
+fi
+return 0
+fi
+fi
+}
+
+# qbtorinfouploadlimit: Show the download limit of the selected torrent in Kb/s
+# Usage: qbtorinfouploadlimit
+
+alias qbtorinfouploadlimit="__META_qbcall qbtorinfodownloadlimit"
+function __META_qbtorinfouploadlimit ()
+{
+qbtorinfo up_limit | jq -r '.dl_limit|if .>0 then (./1024|trunc) else . end'
+return $?
+}
+
+# qbtorinfouplimitedit: Set a new save location of the selected torrent
+# Usage: qbtorinfouploadlimit NEW_LIMIT
+alias qbtorinfouploadlimitedit="__META_qbcall qbtorinfodownloadlimitedit"
+function __META_qbtorinfouploadlimitedit ()
+{
+if [ -z "$QBhash"  ]
+then
+>&2 echo No torrent is selected
+return 1
+else
+if [ -z "$1" ]
+then
+>&2 qbhelp -u qbtorinfouploadlimitedit
+return 1
+else
+local arg=$(jq -rn "$1|if .<0 then -1 else .*1024 end")
+resp=$(__META_qbrequest -e "torrents/setUploadLimit?hashes=$QBhash&limit=$arg" 2>/dev/null)
+if [ "$resp" != "200" ]
+    then
+     >&2 echo 'An error is occured'
+     return 1
+fi
+return 0
+fi
+fi
+}
+
 # qbtorinfolocation: Show the save location of the selected torrent
 # Usage: qbtorinfolocation
 
 alias qbtorinfolocation="__META_qbcall qbtorinfolocation"
 function __META_qbtorinfolocation ()
 {
-qbtorinfo save_path
+qbtorinfo -r save_path
 return $?
 }
 

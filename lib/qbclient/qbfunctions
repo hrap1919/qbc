@@ -461,6 +461,7 @@ case "$1" in
          >&2 echo 'An error is occured'
          return 1
      fi
+     resp=200
     ;;
     categories)
      if [ "$2" == "-d" ]
@@ -880,8 +881,8 @@ return 0
 
 
 # qbtormenuedit: Change an editable property of the selected torrent
-# Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued
-# Usage:qbtormenuedit Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object (not work for priority)
+# Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued (not work for priority)
+# Usage:qbtormenuedit Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object
 # Usage:qbtormenuedit Usage: qbtormenuedit priority (top|increase|decrease|bottom)
 # Usage:qbtormenuedit Usage: qbtormenuedit PROPERTY [-d] ITEM # add or delete("-d") the ITEM from the array PROPERTY (tags)
 
@@ -1524,12 +1525,6 @@ unset QB_url
 QBversion="$QB_version"
 unset QB_version
 [ -e "$HOME/.qbclientrc" ] && . "$HOME/.qbclientrc"
-if [ -z "$QBpassword" ]
-    then
-     read -rs -p "Password for $QBlogin: " QBpassword
-     [ "$?" == "0" ] || exit 1
-     echo
-fi
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin
 exitcode=$?

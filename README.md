@@ -278,7 +278,7 @@ E.g., qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"
 
 The default format of qbtorcontent is:
 
-'(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
+>'(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
 
 #### 23. qbtorcontentedit
 

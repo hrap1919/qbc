@@ -13,9 +13,9 @@ qbclient -p 'adminadmin' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth
 
 It is very convenient to use the qbclient installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a stdin redirection of ssh-command:
 
-ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qblistadd -f -'" <filename.torrent
+ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
 
-(or) cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qblistadd -f -'"
+(or) cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

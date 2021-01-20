@@ -33,6 +33,9 @@ qBittorrent 4.3.1
 
 ### Available functions:
 
+
+All functions have the prefix qb-. If the name of a function is started by qbtor- then it works only if a specific torrent is selected (i.e., the variable QBhash is set to the hash of the torrent). To select a torrent one can one the function qbselect (insetad of a ).
+
 #### 1. qbhelp
 
 qbclient usage help
@@ -55,7 +58,13 @@ Print the versions of used software
 
 Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness])]
 
-#### 3. qbpref
+#### 3. qbnetwork
+
+Show the general network status of the server
+
+Usage: qbnetwork 
+
+#### 4. qbpref
 
 Show the value of specified preference property, or print all preferences
 
@@ -63,7 +72,7 @@ Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 
 With the "-r" option the function returns the raw value of a property
 
-#### 4. qbprefedit
+#### 5. qbprefedit
 
 Send new values of specified preference properties
 
@@ -73,49 +82,69 @@ The option -n prevents an additional check the values from the server after the 
 
 To change the WebUI password by a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
 
-#### 5. qbaltspeed
+#### 6. qbmenu
 
-Get the state of the alternative speed mode
+Show editable options not included into the preferences:alternative speed mode, existing categories and tags
 
-Usage: qbaltspeed 
+Usage: qbmenu [-r] [altspeed|categories|tags]
 
-#### 6. qbaltspeededit
+Option "-r" for a raw output of requested values
 
-Set the state of the alternative speed mode
+#### 7. qbmenuedit
 
-Usage: qbaltspeededit (true|false)
+Change alternative speed mode, categories and tags
 
-any nonepty argument except "true" and "false" causes a togglement of the mode
+Usage: qbmenuedit altspeed (true|false|toggle)
 
-#### 7. qbnetwork
+Usage: qbmenuedit categories -d NAME #(remove a category)
 
-Show the general network status of the server
+Usage: qbmenuedit categories NAME PATH #(create or edit a category)
 
-Usage: qbnetwork 
+Usage: qbmenuedit tags [-d] NAME #(create or remove a tag)
 
-#### 8. qblist
-
-List of torrents with a short info. The torrents are sorted by the addition time. The new torrents always in the end
-
-Usage: qblist 
-
-#### 9. qblistadd
+#### 8. qbadd
 
 Add a torrent by a URL (use quotes), or by a torrent FILE.
 
-Usage: qblistadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
+Usage: qbadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
 
 If FILE='-' then the content of a torrent file will be read from stdin
 
 The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 
-#### 10. qblistremove
+#### 9. qblist
 
-Remove the selected torrent.
+List of torrents with a short info.
 
-Usage: qblistremove [-d] INDEX
+Usage: qblist [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
 
-The correct INDEX from qblist must be specifies. Option "-d" removes also the downloaded data Delete the selected torrent.
+Without options print info of all torrents. The torrents are sorted by the addition time and indexed by numbers
+
+Arguments INDEX_1 and INDEX_2 determine an interval of torrents to be shown
+
+Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
+
+E.g., qblist --jselect '(.category=="My Category")' --jsort '(.name)|reverse'
+
+Advanced option: --jformat enables a possibility to define an own jq-format for output lines
+
+E.g., the following command prints hashes and names of torrents which have the tag "My tag":
+
+qblist --jselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jformat '.hash+"/"+.name'
+
+The default format of qblist is:
+
+'(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+
+#### 10. qbdo
+
+Pause, resume, recheck, reannounce and force start the torrents
+
+Usage: qbdo (pause | resume | recheck | reannounce | setForceStart) [-i [INDEX_1] [INDEX_2]]
+
+With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action
+
+without "-i" the function does the action for the selected torrent (via qbselect function)
 
 #### 11. qbselect
 
@@ -123,57 +152,43 @@ Select the torrent with the specified index from qblist
 
 Usage: qbselect [-s] [INDEX]
 
-alias qbtorselect=qbselect
-
 Option -s: silent mode
 
-#### 12. qbtorselect
+#### 12. qbtordel
 
-Select the torrent with the specified index from qblist.
+Remove the selected torrent.
 
-Usage: qbtorselect [-s] [INDEX]
+Usage: qbtordel [-s] [-d]
 
-alias qbtorselect=qbselect
+Option "-s" is for a silent removing without an interactive confirmation. # qbtordel: Option "-d" is for removing also the downloaded data
 
-Option -s: silent mode
-
-#### 13. qbtordo
-
-Pause, resume, recheck and reannounce of the selected torrent
-
-Usage: qbtordo (pause | resume | recheck | reannounce)
-
-#### 14. qbtorinfo
+#### 13. qbtorinfo
 
 Get the specified information of the selected torrent, or print it completely
 
 Usage: qbtorinfo [(-r INFO_PROPERTY | INFO_PROPERTY_1 [INFO_PROPERTY_2 ...])]
 
-#### 15. qbtorinfolocation
+#### 14. qbtormenu
 
-Show the save location of the selected torrent
+Get editable properties of the selected torrent, or print all editable properties
 
-Usage: qbtorinfolocation 
+Usage: qbtormenu [(-r VAR | VAR_1 [VAR_2 ...])]
 
-#### 16. qbtorinfolocationedit
+The option "-r" is for the raw output of a property
 
-Set a new save location of the selected torrent
+#### 15. qbtormenuedit
 
-Usage: qbtorinfolocationedit NEW_LOCATION
+Change an editable property of the selected torrent
 
-#### 17. qbtorinfosequential
+Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued
 
-Show Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
+Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object (not work for priority)
 
-Usage: qbtorinfosequential 
+Usage: qbtormenuedit priority (top|increase|decrease|bottom)
 
-#### 18. qbtorinfosequentialedit
+Usage: qbtormenuedit PROPERTY [-d] ITEM # add or delete("-d") the ITEM from the array PROPERTY (tags)
 
-Control of Sequential_Download and First_Last_Piece_Priority properties of the selected torrent
-
-Usage: qbtorinfosequentialedit ARG1 [ARG2]
-
-#### 19. qbtorblock
+#### 16. qbtorblock
 
 Scaled piece states string
 
@@ -197,21 +212,23 @@ The meaning of symbols:
 
 The option "-o" specifies the index of a file, whose only pieces will be shown.
 
-The option "-i" specifies the qbtorcontent interval of file indices whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
+The option "-i" specifies the qbtorcontent interval of file indices (alphabetical and generic) whose pieces will be shown among other pieces. The pieces of files outside the interval will be marked by the dot (".")
 
-#### 20. qbtorgeneral
+See "qbtorcontent --help" for a more info on generic and alphabetical indices
+
+#### 17. qbtorgeneral
 
 Get the specified general properties of the selected torrent, or print all of them
 
 Usage: qbtorgeneral [(-r GEN_PROPERTY | GEN_PROPERTY_1 [GEN_PROPERTY_2 ...])]
 
-#### 21. qbtortrack
+#### 18. qbtortrack
 
 Trackers info of the selected torrent
 
 Usage: qbtortrack 
 
-#### 22. qbtortrackedit
+#### 19. qbtortrackedit
 
 Edit trackers of the selected torrent
 
@@ -223,53 +240,73 @@ Options:
 
 URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
 
-#### 23. qbtorpeer
+#### 20. qbtorpeer
 
 List of connected peers of the selected torrent with a short info
 
 Usage: qbtorpeer 
 
-#### 24. qbtorpeeradd
+#### 21. qbtorpeeradd
 
 Add a peer
 
 Usage: qbtorpeeradd PEER
 
-#### 25. qbtorcontent
+#### 22. qbtorcontent
 
-List the files of the selected torrent with a short info
+Alphabetically sorted list of the names and priorities of files of the selected torrent with a short info
 
-Usage: qbtorcontent [FILE_INDEX_1] [FILE_INDEX_2]
+Usage: qbtorcontent [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
 
-Without arguments list all files of the selected torrent in the alphabetical order with a short info.
+Without option print info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
 
-If FILE_INDEX1 is indicated then the list starts with this index and finishes at FILE_INDEX2.
+The generic indices do not depend on renaming of files, they are shown in square brackets.
 
-If no FILE_INDEX2 or FILE_INDEX2<FILE_INDEX1 the list contains only one item.
+The alphabetical indices depend on the names, they may be more convenient than generic ones.
 
-#### 26. qbtorfile
+E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_INDEX) of file2 is [1], while it's alphabetical index (ALPH_INDEX) is 3.
 
-Get the info of the specified file of the selected torrent
+Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
 
-Usage: qbtorfile FILE_INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
+Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
 
-FILE_INDEX corresponds to the output of qbtorcontent
+E.g., qbtorcontent --jselect '(.priority==7)' --jsort '(.progress)|reverse'
 
-#### 27. qbtorfileprio
+Advanced option: --jformat enables a possibility to define an own jq-format for output lines
 
-Show the file priorities of the selected torrent with a short info
+E.g., qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"] "+.name'
 
-Usage: qbtorfileprio [-r] [FILE_INDEX_1] [FILE_INDEX_2]
+The default format of qbtorcontent is:
 
-The arguments ARG_1 and ARG2 determine an interval of files similarly with qbtorcontent
+'(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
 
-With the "-r" option the function prints only priority values
+#### 23. qbtorcontentedit
 
-#### 28. qbtorfileprioedit
+Change the name of a file and the priorities of files of the selected torrent
 
-Set priority of all files of the selected torrent, or set the priority for the files in the qbcontent() interval
+Usage: qbtorcontentedit name NEW_NAME INDEX
 
-Usage: qbtorfileprioedit NEW_PRIORITY [FILE_INDEX_1] [FILE_INDEX_2]
+If the INDEX is alphatical (no brackets) then the function prints the generic index of the renamed file
 
-FILE_INDEX corresponds to the output of qbtorcontent
+If the INDEX is generic then function prints nothing to stdout
+
+Usage: qbtorcontentedit prio NEW_PRIORITY [INDEX_1] [INDEX_2]
+
+Without arguments  INDEX_1 and INDEX_2 the function does a global change of file priorities
+
+With arguments INDEX_1 INDEX_2 the function sets a new priority to the files in the specified interval, the same as in qbcontent
+
+See "qbcontent --help" for a more info on generic and alphabetical indices
+
+#### 24. qbtorfile
+
+Get the full info of the specified file of the selected torrent
+
+Usage: qbtorfile INDEX [(-r PROPERTY | PROPERTY_1 [PROPERTY_2 ...])]
+
+INDEX can be either alphabetic or generic
+
+For example, "qbtorfile [n] -r alph_index" gives the alphabetic index of the generic index [n], while "qbtorfile n -r gen_index" does the reverse transformation
+
+Try "qbtorcontent --help" for a more info on generic and alphabetical indices
 

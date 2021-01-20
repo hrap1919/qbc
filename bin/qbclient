@@ -1,9 +1,10 @@
 #!/bin/bash
 
 export BASH_ENV=$(dirname "$0")"/../lib/qbclient/qbfunctions"
-
+export QB_version="A candidate for Beta"
 #Usage: qbclient ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
-{ [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && shift
+{ [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && { echo 'A qBittorent WebUI bash client'; echo; echo 'Usage: qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...'; exit 0; }
+{ [ "$1" == "-v" ] || [ "$1" == "--version" ]; } && { echo "$QB_version" ; exit 0; }
 if [ "$1" == "-k" ]
     then
      QB_arg1="-k"
@@ -42,6 +43,8 @@ if [ "$1" == "-p" ]
 fi
 if [ -z "$1" ]
     then
+     >&2 echo 'A qBittorent WebUI bash client'
+     >&2 echo
      >&2 echo 'Usage: qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...'
      exit 127
 fi

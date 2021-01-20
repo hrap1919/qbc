@@ -1515,7 +1515,7 @@ QBarg=()
 [ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")
 unset QB_arg1
 unset QB_arg2
-QBlogin="$QB_login"
+QBlogin=$(echo "$QB_login" | jq  -rR @uri)
 unset QB_login
 QBpassword="$QB_password"
 unset QB_password
@@ -1523,6 +1523,14 @@ QBurl="$QB_url"
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
+[ -e "$HOME/.qbclientrc" ] && . "$HOME/.qbclientrc"
+if [ -z "$QBpassword" ]
+    then
+     read -rs -p "Password for $QBlogin: " QBpassword
+     [ "$?" == "0" ] || exit 1
+     echo
+fi
+QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"

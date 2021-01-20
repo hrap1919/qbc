@@ -34,7 +34,7 @@ qBittorrent 4.3.1
 ### Available functions:
 
 
-All functions have the prefix qb-. If the name of a function is started by qbtor- then it works only if a specific torrent is selected (i.e., the variable QBhash is set to the hash of the torrent). To select a torrent one can one the function qbselect (insetad of a ).
+All functions have the prefix qb-. If the name of a function is started by qbtor- then it works only if a specific torrent is selected (i.e., the variable QBhash is set to the hash of the torrent). To select a torrent one can use the function qbselect.
 
 #### 1. qbhelp
 

@@ -114,7 +114,10 @@ Add a torrent by a URL (use quotes), or by a torrent FILE.
 
 Usage: qbadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
 
-If FILE='-' then the content of a torrent file will be read from stdin
+If FILE='-' then the content of a torrent file will be read from stdin.
+
+If URL='-' then one line with the url will be read from stdin.
+
 
 The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)#add-new-torrent
 

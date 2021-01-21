@@ -5,7 +5,7 @@
 case "$QBurlshort" in
     server1)
      # The real URL for server1
-     QBurl='http://127.0.0.1:8080'.
+     QBurl='http://127.0.0.1:8080'
      # The login name for server2
      QBlogin='user'
      # The password for server2
@@ -17,7 +17,7 @@ case "$QBurlshort" in
      # Any other presets and defined fuunctions
     server2)
      # The real URL for server2
-     QBurl='https://192.168.1.10:8080'.
+     QBurl='https://192.168.1.10:8080'
      # The login name for server2
      # QBlogin='admin'
      # The password for server2
@@ -28,7 +28,7 @@ case "$QBurlshort" in
      ;;
     server3)
      # The real URL for server3
-     QBurl='https://server3.com:8181'.
+     QBurl='https://server3.com:8181'
      # The login name for server3
      # QBlogin='admin'
      # The password for server3

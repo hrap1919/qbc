@@ -824,7 +824,7 @@ if [ "$1" == "-r" ]
 fi
 if [ -z "$1" ]
     then
-     __META_qbrequest "torrents/info?hashes=$QBhash" | jq 2>/dev/null
+     __META_qbrequest "torrents/info?hashes=$QBhash" | jq ".[]" 2>/dev/null
     else
      local jj='{"'"$1"'":.'"$1"
      shift
@@ -864,7 +864,7 @@ if [ "$1" == "-r" ]
 fi
 if [ -z "$1" ]
     then
-     __META_qbrequest "torrents/info?hashes=$QBhash" | jq "[.[]|$vars]" 2>/dev/null
+     __META_qbrequest "torrents/info?hashes=$QBhash" | jq ".[]|$vars" 2>/dev/null
     else
      local jj='{"'"$1"'":.'"$1"
      shift

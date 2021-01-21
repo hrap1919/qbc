@@ -158,7 +158,7 @@ if [ "$1" == "list" ]
                  echo
              fi
          fi
-        done < "$BASH_ENV"
+        done < "$QBHelpfile"
 fi
 }
 
@@ -1532,3 +1532,5 @@ __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
 unset exitcode
+QBHelpfile="$BASH_ENV"
+unset BASH_ENV

@@ -37,7 +37,7 @@ if [ "$1" == "-p" ]
     then
      if [ "$2" == "-" ]
         then
-         read -rs -p "Password for $QBlogin: " QB_password
+         read -rs -p "Password for $QB_login: " QB_password
          exitcode="$?"
          [ "$exitcode" == "0" ] || exit "$exitcode"
          echo

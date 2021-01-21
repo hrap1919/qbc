@@ -6,9 +6,9 @@ case "$QBurlshort" in
     server1)
      # The real URL for server1
      QBurl='http://127.0.0.1:8080'
-     # The login name for server2
+     # The login name for server1
      QBlogin='user'
-     # The password for server2
+     # The password for server1
      QBpassword='adminadmin'
      # An array with additional options passed to cURL
      # QBarg=()

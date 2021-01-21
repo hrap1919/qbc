@@ -3,19 +3,25 @@ A simple qBittorrent remote command-line client based on the bash, curl and jq b
 
 The file bin/qbcient is a bash-script which invokes a bash-subshell after an authorization to the server. Usage:
 
+```console
 qbc [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
+```
 
-The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". If PASSWORD parameter is set to "-" then the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]".
+The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". If PASSWORD parameter is set to "-" then the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]". Alternatively, there is a possibility to use presets specific for each connection defined in ~/.qbcrc file (see .qbcrc_template). In the last case, 
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbc options in the bash syntax, for example:
 
+```console
 qbc -p 'adminadmin' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
+```
 
-It is very convenient to use the qbc installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a stdin redirection of ssh-command:
+It is very convenient to use ssh- or mosh-access with the qbc installed on the qBittorrent server itself. To add a torrent file remotely one can use a stdin redirection of ssh-command:
 
+```console
 ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
+```
 
-(or) cat filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'"
+(or) cat ```console filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" ```
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 
@@ -134,7 +140,9 @@ qblist --jselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jformat '.hash+
 
 The default format of qblist is:
 
+```console
 '(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+```
 
 #### 10. qbdo
 
@@ -278,7 +286,9 @@ E.g., qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"
 
 The default format of qbtorcontent is:
 
+```console
 '(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability\*100|trunc|tostring)+"% online"'
+```
 
 #### 23. qbtorcontentedit
 

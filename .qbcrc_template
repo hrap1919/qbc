@@ -10,6 +10,8 @@ case "$QBurlshort" in
      QBpassword='adminadmin'
      # An array with additional options passed to cURL
      # QBarg=()
+     # Point a specific history file
+     # HISTFILE="$HOME/.qbc_history"
      # Any other presets and defined fuunctions
     server2)
      # The real URL for server2

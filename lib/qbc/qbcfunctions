@@ -1560,7 +1560,7 @@ QBurl=""
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
-[ -e "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
+[ -f "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
 [ -z "$QBurl" ] && QBurl="$QBurlshort"
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin

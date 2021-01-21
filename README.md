@@ -7,7 +7,7 @@ The file bin/qbcient is a bash-script which invokes a bash-subshell after an aut
 qbc [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
 ```
 
-The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". If PASSWORD parameter is set to "-" then the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]". Alternatively, there is a possibility to use presets specific for each connection defined in ~/.qbcrc file (see .qbcrc_template). In the last case, 
+The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". If PASSWORD parameter is set to "-" then the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]". Alternatively, there is a possibility to use presets specific for each connection defined in ~/.qbcrc file (see .qbcrc_template). 
 
 In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbc options in the bash syntax, for example:
 
@@ -40,7 +40,7 @@ qBittorrent 4.3.1
 ### Available functions:
 
 
-All functions have the prefix qb-. If the name of a function is started by qbtor- then it works only if a specific torrent is selected (i.e., the variable QBhash is set to the hash of the torrent). To select a torrent one can use the function qbselect.
+All functions have the prefix qb-. If the name of a function is started by "qbtor" then it works only if a specific torrent is selected (i.e., the variable QBhash is set to the hash of the torrent). To select a torrent one can use the function qbselect.
 
 #### 1. qbhelp
 

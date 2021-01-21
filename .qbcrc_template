@@ -1,5 +1,7 @@
 # Template for ~/.qbcrc
 #
+# Some code...
+#
 case "$QBurlshort" in
     server1)
      # The real URL for server1

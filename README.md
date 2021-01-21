@@ -1,21 +1,21 @@
-# qbclient
+# qbc - qBittorrent Bash Client
 A simple qBittorrent remote command-line client based on the bash, curl and jq binaries for a Linux-compatible environment (including Cygwin and Termux). It uses the last WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
 The file bin/qbcient is a bash-script which invokes a bash-subshell after an authorization to the server. Usage:
 
-qbclient [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
+qbc [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
 
 The option -k implies an insecure https connection. The option -c is for pointing the self-signed cerificate of qBittorrent Web UI. The default value for USERNAME is "admin". If PASSWORD parameter is set to "-" then the password will be asked from stdin. The expected value for URL is either "http://host[:port]", or "https://host[:port]".
 
-In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbclient options in the bash syntax, for example:
+In the invoked subshell a number of bash functions are defined which realize a client functionality (see the function description below). All these functions can be called through the qbc options in the bash syntax, for example:
 
-qbclient -p 'adminadmin' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
+qbc -p 'adminadmin' http://localhost:8080 -c "qbprefedit -s web_ui_max_auth_fail_count 10"
 
-It is very convenient to use the qbclient installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a stdin redirection of ssh-command:
+It is very convenient to use the qbc installed on the qBittorrent server itself via an ssh- or mosh-access. Then to add a torrent file remotely one can use a stdin redirection of ssh-command:
 
-ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
+ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
 
-(or) cat filename.torrent | ssh user@host qbclient -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'"
+(or) cat filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'"
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 
@@ -38,7 +38,7 @@ All functions have the prefix qb-. If the name of a function is started by qbtor
 
 #### 1. qbhelp
 
-qbclient usage help
+qbc usage help
 
 Usage: qbhelp [(list | [-u] FUNCTION)]
 

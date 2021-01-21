@@ -113,7 +113,7 @@ if [ "$2" == "-h" ]
 fi
 }
 
-# qbhelp: qbclient usage help
+# qbhelp: qbc usage help
 # Usage: qbhelp [(list | [-u] FUNCTION)]
 # Usage:qbhelp Usage: FUNCTION (-h|--help)
 # qbhelp: Options:
@@ -1508,7 +1508,7 @@ return 0
 ##########################################################################################
 
 shopt -s expand_aliases
-HISTFILE="$HOME/.qbclient_history"
+HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"
 PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "'
 QBarg=()
@@ -1524,7 +1524,7 @@ QBurl="$QB_url"
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
-[ -e "$HOME/.qbclientrc" ] && . "$HOME/.qbclientrc"
+[ -e "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin
 exitcode=$?

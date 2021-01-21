@@ -193,9 +193,9 @@ The option "-r" is for the raw output of a property
 
 Change an editable property of the selected torrent
 
-Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued
+Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued (not work for priority)
 
-Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object (not work for priority)
+Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object
 
 Usage: qbtormenuedit priority (top|increase|decrease|bottom)
 

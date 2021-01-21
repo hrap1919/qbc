@@ -1545,7 +1545,7 @@ return 0
 shopt -s expand_aliases
 HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"
-PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
+PROMPT_COMMAND='[ -z $QBcookie ] && exit 1; history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
 QBarg=()
 [ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
 [ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")

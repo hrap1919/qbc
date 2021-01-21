@@ -1219,7 +1219,7 @@ return 0
 # qbtorpeer: Advanced option: --jformat enables a possibility to define an own jq-format for output  lines. E.g.,
 # qbtorpeer: qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
 # qbtorpeer: The default format of qbtorcontent is:
-# qbtorpeer: qbtorpeer --jsort '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+# qbtorpeer: qbtorpeer --jformat '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 # qbtorpeer: The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
 
 alias qbtorpeer="__META_qbcall qbtorpeer"
@@ -1283,7 +1283,7 @@ if [ -z "$1" ]
      return 127
 fi
 local resp=$(echo "$1"|jq -rR '@uri')
-resp=$(__META_qbrequest -e "torrents/addPeers?hashes=$QBhash&peers=$peers" 2>/dev/null)
+resp=$(__META_qbrequest -e "torrents/addPeers?hashes=$QBhash&peers=$resp" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      if [ "$resp" == 400 ]

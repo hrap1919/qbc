@@ -276,7 +276,7 @@ qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
 The default format of qbtorcontent is:
 
 ```console
-qbtorpeer --jsort '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+qbtorpeer --jformat '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 ```
 
 The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded

@@ -1510,7 +1510,7 @@ return 0
 shopt -s expand_aliases
 HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"
-PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurl"/"\${QBhash:0:5}"> "'
+PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
 QBarg=()
 [ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
 [ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")
@@ -1520,11 +1520,13 @@ QBlogin=$(echo "$QB_login" | jq  -rR @uri)
 unset QB_login
 QBpassword="$QB_password"
 unset QB_password
-QBurl="$QB_url"
+QBurlshort="$QB_url"
+QBurl=""
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
 [ -e "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
+[ -z "$QBurl" ] && QBurl="$QBurlshort"
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin
 exitcode=$?

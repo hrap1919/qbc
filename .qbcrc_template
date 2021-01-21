@@ -1,6 +1,6 @@
 # Template for ~/.qbcrc
 #
-case "$QBurl" in
+case "$QBurlshort" in
     server1)
      # The real URL for server1
      QBurl='http://127.0.0.1:8080'.

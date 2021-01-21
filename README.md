@@ -60,19 +60,19 @@ FUNCTION - the help for FUNCTION
 
 #### 2. qbversion
 
-Print the versions of used software
+Prints the versions of used software
 
 Usage: qbversion [(app|api|build [qt|libtorrent|boost|openssl|bitness])]
 
 #### 3. qbnetwork
 
-Show the general network status of the server
+Shows the general network status of the server
 
 Usage: qbnetwork 
 
 #### 4. qbpref
 
-Show the value of specified preference property, or print all preferences
+Shows the value of specified preference property, or print all preferences
 
 Usage: qbpref [(-r PREF_PROPERTY | PREF_PROPERTY_1 [PREF_PROPERTY_2 ...])]
 
@@ -80,7 +80,7 @@ With the "-r" option the function returns the raw value of a property
 
 #### 5. qbprefedit
 
-Send new values of specified preference properties
+Sends new values of specified preference properties
 
 Usage: qbprefedit [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
 
@@ -90,7 +90,7 @@ To change the WebUI password by a secure way (from stdin) just omit the NEW_VALU
 
 #### 6. qbmenu
 
-Show editable options not included into the preferences:alternative speed mode, existing categories and tags
+Shows editable options not included into the preferences:alternative speed mode, existing categories and tags
 
 Usage: qbmenu [-r] [altspeed|categories|tags]
 
@@ -98,7 +98,7 @@ Option "-r" for a raw output of requested values
 
 #### 7. qbmenuedit
 
-Change alternative speed mode, categories and tags
+Changes alternative speed mode, categories and tags
 
 Usage: qbmenuedit altspeed (true|false|toggle)
 
@@ -110,7 +110,7 @@ Usage: qbmenuedit tags [-d] NAME #(create or remove a tag)
 
 #### 8. qbadd
 
-Add a torrent by a URL (use quotes), or by a torrent FILE.
+Adds a torrent by a URL (use quotes), or by a torrent FILE.
 
 Usage: qbadd ( -u 'URL'| -f FILE)  [ARG_1=VALUE_1] [ARG_2=VALUE_2] ...
 
@@ -127,7 +127,7 @@ List of torrents with a short info.
 
 Usage: qblist [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
 
-Without options print info of all torrents. The torrents are sorted by the addition time and indexed by numbers
+Without options prints info of all torrents. The torrents are sorted by the addition time and indexed by numbers
 
 Arguments INDEX_1 and INDEX_2 determine an interval of torrents to be shown
 
@@ -159,7 +159,7 @@ without "-i" the function does the action for the selected torrent (via qbselect
 
 #### 11. qbselect
 
-Select the torrent with the specified index from qblist
+Selects the torrent with the specified index from qblist
 
 Usage: qbselect [-s] [INDEX]
 
@@ -269,7 +269,7 @@ Alphabetically sorted list of the names and priorities of files of the selected 
 
 Usage: qbtorcontent [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
 
-Without option print info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
+Without option prints info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
 
 The generic indices do not depend on renaming of files, they are shown in square brackets.
 

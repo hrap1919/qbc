@@ -1211,24 +1211,59 @@ fi
 return 0
 }
 
-
-
-
-
 # qbtorpeer: List of connected peers of the selected torrent with a short info
-# Usage: qbtorpeer
+# Usage: qbtorpeer  [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT]
+# qbtorpeer: Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
+# qbtorpeer: qbtorpeer --jselect '(.progress>0)' --jsort '(.dl_speed)'
+# qbtorpeer: The default --jsort value is '(.progress)'
+# qbtorpeer: Advanced option: --jformat enables a possibility to define an own jq-format for output  lines. E.g.,
+# qbtorpeer: qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
+# qbtorpeer: The default format of qbtorcontent is:
+# qbtorpeer: qbtorpeer --jsort '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+# qbtorpeer: The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
 
 alias qbtorpeer="__META_qbcall qbtorpeer"
 function __META_qbtorpeer ()
 {
 if [ -z "$QBhash" ]
-then
->&2 echo 'No selected torrent'
-return 1
-else
-__META_qbrequest "sync/torrentPeers?hash=$QBhash"| jq '[.peers | .[]] | sort_by(.progress) |.[] |
-(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"' 2>/dev/null
+    then
+     >&2 echo 'No selected torrent'
+     return 1
 fi
+local selectfilter=""
+if [ "$1" == "--jselect" ]
+    then
+     [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
+     selectfilter="|select$2"
+     shift
+     shift
+fi
+local sortfilter=""
+if [ "$1" == "--jsort" ]
+    then
+     [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
+     sortfilter="|sort_by$2"
+     shift
+     shift
+    else
+     sortfilter="|sort_by(.progress)"
+fi
+local filter=""
+if [ "$1" == "--jformat" ]
+    then
+     [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
+     filter="$2"
+     shift
+     shift
+    else
+     filter='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+fi
+if [ ! -z "$1" ]
+    then
+     >&2 qbhelp -u qbtorpeer
+     return 127
+fi
+__META_qbrequest "sync/torrentPeers?hash=$QBhash"| jq "[.peers | .[]$selectfilter]$sortfilter|.[]|$filter"
 }
 
 # qbtorpeeradd: Add a peer

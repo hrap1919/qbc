@@ -131,15 +131,17 @@ Without options prints info of all torrents. The torrents are sorted by the addi
 
 Arguments INDEX_1 and INDEX_2 determine an interval of torrents to be shown
 
-Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
+Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g.,
 
-E.g., qblist --jselect '(.category=="My Category")' --jsort '(.name)|reverse'
+qblist --jselect '(.category=="My Category")' --jsort '(.name)|reverse'
 
 Advanced option: --jformat enables a possibility to define an own jq-format for output lines
 
 E.g., the following command prints hashes and names of torrents which have the tag "My tag":
 
+```console
 qblist --jselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jformat '.hash+"/"+.name'
+```
 
 The default format of qblist is:
 
@@ -255,7 +257,29 @@ URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
 
 List of connected peers of the selected torrent with a short info
 
-Usage: qbtorpeer 
+Usage: qbtorpeer [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT]
+
+Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
+
+```console
+qbtorpeer --jselect '(.progress>0)' --jsort '(.dl_speed)'
+```
+
+The default --jsort value is '(.progress)'
+
+Advanced option: --jformat enables a possibility to define an own jq-format for output  lines. E.g.,
+
+```console
+qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
+```
+
+The default format of qbtorcontent is:
+
+```console
+qbtorpeer --jsort '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+```
+
+The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
 
 #### 21. qbtorpeeradd
 
@@ -279,13 +303,17 @@ E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_IN
 
 Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
 
-Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
+Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
 
-E.g., qbtorcontent --jselect '(.priority==7)' --jsort '(.progress)|reverse'
+```console
+qbtorcontent --jselect '(.priority==7)' --jsort '(.progress)|reverse'
+```
 
-Advanced option: --jformat enables a possibility to define an own jq-format for output lines
+Advanced option: --jformat enables a possibility to define an own jq-format for output lines. E.g.,
 
-E.g., qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"] "+.name'
+```console
+qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"] "+.name'
+```
 
 The default format of qbtorcontent is:
 

@@ -32,7 +32,7 @@ case "$QBurlshort" in
      # The password for server3
      QBpassword='nY68j6yTp'
      # https with a self-signed certificate:
-     QBarg=('--cacert' '/path/to/the/cerificate/file.crt')
+     QBarg=('--cacert' '/path/to/the/certificate/file.crt')
      # Any other pre-sets and defined fuunctions
      ;;
 esac

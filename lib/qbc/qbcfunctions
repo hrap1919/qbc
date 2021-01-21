@@ -1560,6 +1560,8 @@ QBurl=""
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
+QBhelpfile="$BASH_ENV"
+unset BASH_ENV
 [ -f "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
 [ -z "$QBurl" ] && QBurl="$QBurlshort"
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
@@ -1567,5 +1569,3 @@ __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
 unset exitcode
-QBhelpfile="$BASH_ENV"
-unset BASH_ENV

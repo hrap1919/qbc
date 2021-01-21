@@ -21,7 +21,7 @@ It is very convenient to use ssh- or mosh-access with the qbc installed on the q
 ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
 ```
 
-(or) cat ```console filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" ```
+(or) cat console filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" 
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 

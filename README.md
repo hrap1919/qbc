@@ -125,22 +125,22 @@ The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBitto
 
 List of torrents with a short info.
 
-Usage: qblist [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
+Usage: qblist [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
 
 Without options prints info of all torrents. The torrents are sorted by the addition time and indexed by numbers
 
 Arguments INDEX_1 and INDEX_2 determine an interval of torrents to be shown
 
-Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g.,
+Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters. E.g.,
 
-qblist --jselect '(.category=="My Category")' --jsort '(.name)|reverse'
+qblist --jqselect '(.category=="My Category")' --jqsort '(.name)|reverse'
 
-Advanced option: --jformat enables a possibility to define an own jq-format for output lines
+Advanced option: --jq enables a possibility to define an own jq-format for output lines
 
 E.g., the following command prints hashes and names of torrents which have the tag "My tag":
 
 ```console
-qblist --jselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jformat '.hash+"/"+.name'
+qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+.name'
 ```
 
 The default format of qblist is:
@@ -257,26 +257,26 @@ URL_1 [URL_2] - Add the tracker URL_1, or replace URL_2 by URL_1
 
 List of connected peers of the selected torrent with a short info
 
-Usage: qbtorpeer [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT]
+Usage: qbtorpeer [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT]
 
-Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
+Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters. E.g,
 
 ```console
-qbtorpeer --jselect '(.progress>0)' --jsort '(.dl_speed)'
+qbtorpeer --jqselect '(.progress>0)' --jqsort '(.dl_speed)'
 ```
 
-The default --jsort value is '(.progress)'
+The default --jqsort value is '(.progress)'
 
-Advanced option: --jformat enables a possibility to define an own jq-format for output  lines. E.g.,
+Advanced option: --jq enables a possibility to define an own jq-format for output  lines. E.g.,
 
 ```console
-qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
+qbtorpeer --jqsort '(.progress)|reverse' --jq '.ip+":"+(.port|tostring)'
 ```
 
 The default format of qbtorcontent is:
 
 ```console
-qbtorpeer --jformat '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+qbtorpeer --jq '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 ```
 
 The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
@@ -291,7 +291,7 @@ Usage: qbtorpeeradd PEER
 
 Alphabetically sorted list of the names and priorities of files of the selected torrent with a short info
 
-Usage: qbtorcontent [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
+Usage: qbtorcontent [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
 
 Without option prints info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
 
@@ -303,16 +303,16 @@ E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_IN
 
 Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
 
-Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
+Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters. E.g,
 
 ```console
-qbtorcontent --jselect '(.priority==7)' --jsort '(.progress)|reverse'
+qbtorcontent --jqselect '(.priority==7)' --jqsort '(.progress)|reverse'
 ```
 
-Advanced option: --jformat enables a possibility to define an own jq-format for output lines. E.g.,
+Advanced option: --jq enables a possibility to define an own jq-format for output lines. E.g.,
 
 ```console
-qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"] "+.name'
+qbtorcontent --jqsort '(.gen_index)' --jq '"["+(.gen_index|tostring)+"] "+.name'
 ```
 
 The default format of qbtorcontent is:

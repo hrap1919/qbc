@@ -596,22 +596,31 @@ jq -n --arg hash "$QBhash" --argjson jj "$newinfo" '$jj|.[]|select(.hash==$hash)
 ## Usage: qblist
 
 # qblist: List of torrents with a short info.
-# Usage: qblist [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
-# qblist: Without options print info of all torrents. The torrents are sorted by the addition time and indexed by numbers
+# Usage: qblist [-r] [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
+# qblist: Option -r: raw output
+# qblist: Without INDEX_1 and INDEX_2 print info of all torrents. The torrents are sorted by the addition time and indexed by numbers
 # qblist: Arguments INDEX_1 and INDEX_2 determine an interval of torrents to be shown
-# qblist: Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
-# qblist: E.g., qblist --jselect '(.category=="My Category")' --jsort '(.name)|reverse'
-# qblist: Advanced option: --jformat enables a possibility to define an own jq-format for output lines
+# qblist: Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters
+# qblist: E.g., qblist --jqselect '(.category=="My Category")' --jqsort '(.name)|reverse'
+# qblist: Advanced option: --jq enables a possibility to define an own jq-format for output lines
 # qblist: E.g., the following command prints hashes and names of torrents which have the tag "My tag":
-# qblist: qblist --jselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jformat '.hash+"/"+.name'
-# qblist: The default format of qblist is:
-# qblist: '(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+# qblist: qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+.name'
+# qblist: The default format of qblist is defined in the variable
+# qblist: 'QBlistjq=(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 
 alias qblist="__META_qbcall qblist"
 function __META_qblist ()
 {
+local rawar=()
+if  [ "$1" == "-r" ]
+    then
+     rawar=('-r')
+     shift
+    else
+     rawar=()
+fi
 local selectfilter=""
-if [ "$1" == "--jselect" ]
+if [ "$1" == "--jqselect" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      selectfilter="|select$2"
@@ -619,7 +628,7 @@ if [ "$1" == "--jselect" ]
      shift
 fi
 local sortfilter=""
-if [ "$1" == "--jsort" ]
+if [ "$1" == "--jqsort" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      sortfilter="|sort_by$2"
@@ -627,21 +636,21 @@ if [ "$1" == "--jsort" ]
      shift
 fi
 local filter=""
-if [ "$1" == "--jformat" ]
+if [ "$1" == "--jq" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      filter="$2"
      shift
      shift
     else
-filter='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+filter="$QBlistjq"
 fi
 local arg2
 local globfilter='to_entries|.[]|{"index":.key}+.value'
 if [ -z "$1" ]
     then
      __META_qbrequest "torrents/info?sort=added_on" |
-     jq "[$globfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
+     jq "${rawar[@]}" "[$globfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
     else
      local arg1="$1"
      local arg2=""
@@ -651,7 +660,7 @@ if [ -z "$1" ]
      fi
      local indexfilter="select(.index==$arg1 or (.index>$arg1 and .index<=$arg2))"
      __META_qbrequest "torrents/info?sort=added_on" |
-     jq "[$globfilter|$indexfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
+     jq "${rawar[@]}" "[$globfilter|$indexfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
 fi
 return 0
 }
@@ -717,19 +726,41 @@ return 0
 
 
 # qbselect: Select the torrent with the specified index from qblist
-# Usage: qbselect [-s] [INDEX]
+# Usage: qbselect [-s| [-r] [--jq FORMAT]] [INDEX]
 # qbselect: Option -s: silent mode
+# qbselect: Option -r: raw output
+# qbselect: Advanced option: --jq enables a possibility to define an own jq-format for output info on the selected torrent
+# qbselect: The deafult format is defined in the variable
+# qbselect: QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+
 
 alias qbselect="__META_qbcall qbselect"
 function __META_qbselect ()
 {
-local silent
+local silent=""
+local filter=""
+local rawar=()
 if  [ "$1" == "-s" ]
     then
      silent="yes"
      shift
     else
      silent=""
+     if  [ "$1" == "-r" ]
+        then
+         rawar=('-r')
+         shift
+        else
+         rawar=()
+     fi
+     if  [ "$1" == "--jq" ]
+        then
+         filter="$2"
+         shift
+         shift
+        else
+         filter="$QBselectjq"
+     fi
 fi
 if [ -z "$1" ] && [ -z "$QBhash" ]
     then
@@ -741,16 +772,15 @@ if [ ! -z "$1" ]
     then
      resp=$(__META_qbrequest 'torrents/info?sort=added_on')
      QBhash=$(echo "$resp" | jq -r ".[$1].hash" 2>/dev/null)
+     [ -z "$silent" ] && echo "Torrent with hash="$QBhash" is selected"
 fi
-echo "Torrent with hash="$QBhash" is selected"
-local filter='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 if [  -z "$silent" ]
     then
      if [ -z "$resp" ]
         then
-         __META_qbrequest "torrents/info?hashes=$QBhash" | jq '.[] |'"$filter" 2>/dev/null
+         __META_qbrequest "torrents/info?hashes=$QBhash" | jq "${rawar[@]}" '.[] |'"$filter" 2>/dev/null
         else
-         echo "$resp" | jq --arg qbhash "$QBhash" '.[]|select(.hash==$qbhash)'"$filter" 2>/dev/null
+         echo "$resp" | jq "${rawar[@]}" --arg qbhash "$QBhash" '.[]|select(.hash==$qbhash)'"$filter" 2>/dev/null
      fi
 fi
 }
@@ -1212,14 +1242,15 @@ return 0
 }
 
 # qbtorpeer: List of connected peers of the selected torrent with a short info
-# Usage: qbtorpeer  [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT]
-# qbtorpeer: Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters. E.g,
-# qbtorpeer: qbtorpeer --jselect '(.progress>0)' --jsort '(.dl_speed)'
-# qbtorpeer: The default --jsort value is '(.progress)'
-# qbtorpeer: Advanced option: --jformat enables a possibility to define an own jq-format for output  lines. E.g.,
-# qbtorpeer: qbtorpeer --jsort '(.progress)|reverse' --jformat '.ip+":"+(.port|tostring)'
-# qbtorpeer: The default format of qbtorcontent is:
-# qbtorpeer: qbtorpeer --jformat '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+# Usage: qbtorpeer [-r] [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT]
+# qbtorpeer: Option -r: raw output
+# qbtorpeer: Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters. E.g,
+# qbtorpeer: qbtorpeer --jqselect '(.progress>0)' --jqsort '(.dl_speed)'
+# qbtorpeer: The default --jqsort value is '(.progress)'
+# qbtorpeer: Advanced option: --jq enables a possibility to define an own jq-format for output  lines. E.g.,
+# qbtorpeer: qbtorpeer --jqsort '(.progress)|reverse' --jq '.ip+":"+(.port|tostring)'
+# qbtorpeer: The default format of qbtorcontent is defined in the variable
+# qbtorpeer: QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 # qbtorpeer: The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
 
 alias qbtorpeer="__META_qbcall qbtorpeer"
@@ -1230,8 +1261,16 @@ if [ -z "$QBhash" ]
      >&2 echo 'No selected torrent'
      return 1
 fi
+local rawar=()
+if  [ "$1" == "-r" ]
+    then
+     rawar=('-r')
+     shift
+    else
+     rawar=()
+fi
 local selectfilter=""
-if [ "$1" == "--jselect" ]
+if [ "$1" == "--jqselect" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      selectfilter="|select$2"
@@ -1239,7 +1278,7 @@ if [ "$1" == "--jselect" ]
      shift
 fi
 local sortfilter=""
-if [ "$1" == "--jsort" ]
+if [ "$1" == "--jqsort" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      sortfilter="|sort_by$2"
@@ -1249,21 +1288,21 @@ if [ "$1" == "--jsort" ]
      sortfilter="|sort_by(.progress)"
 fi
 local filter=""
-if [ "$1" == "--jformat" ]
+if [ "$1" == "--jq" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      filter="$2"
      shift
      shift
     else
-     filter='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+     filter="$QBtorpeerjq"
 fi
 if [ ! -z "$1" ]
     then
      >&2 qbhelp -u qbtorpeer
      return 127
 fi
-__META_qbrequest "sync/torrentPeers?hash=$QBhash"| jq "[.peers | .[]$selectfilter]$sortfilter|.[]|$filter"
+__META_qbrequest "sync/torrentPeers?hash=$QBhash"| jq "${rawar[@]}" "[.peers | .[]$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
 }
 
 # qbtorpeeradd: Add a peer
@@ -1298,18 +1337,18 @@ return 0
 }
 
 # qbtorcontent: Alphabetically sorted list of the names and priorities of files of the selected torrent with a short info
-# Usage: qbtorcontent [--jselect FILTER] [--jsort FILTER] [--jformat FORMAT] [INDEX_1] [INDEX_2]
+# Usage: qbtorcontent [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
 # qbtorcontent: Without option print info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
 # qbtorcontent: The generic indices do not depend on renaming of files, they are shown in square brackets.
 # qbtorcontent: The alphabetical indices depend on the names, they may be more convenient than generic ones.
 # qbtorcontent: E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_INDEX) of file2 is [1], while it's alphabetical index (ALPH_INDEX) is 3.
 # qbtorcontent: Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
-# qbtorcontent: Advanced options: --jselect and --jsort for inserting "select" and "sort_by" jq-filters
-# qbtorcontent: E.g., qbtorcontent --jselect '(.priority==7)' --jsort '(.progress)|reverse'
-# qbtorcontent: Advanced option: --jformat enables a possibility to define an own jq-format for output lines
-# qbtorcontent: E.g., qbtorcontent --jsort '(.gen_index)' --jformat '"["+(.gen_index|tostring)+"] "+.name'
-# qbtorcontent: The default format of qbtorcontent is:
-# qbtorcontent: '(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
+# qbtorcontent: Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters
+# qbtorcontent: E.g., qbtorcontent --jqselect '(.priority==7)' --jqsort '(.progress)|reverse'
+# qbtorcontent: Advanced option: --jq enables a possibility to define an own jq-format for output lines
+# qbtorcontent: E.g., qbtorcontent --jqsort '(.gen_index)' --jq '"["+(.gen_index|tostring)+"] "+.name'
+# qbtorcontent: The default format of qbtorcontent is defined in the variable
+# qbtorcontent: QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
 
 
 alias qbtorcontent="__META_qbcall qbtorcontent"
@@ -1320,8 +1359,16 @@ if [ -z "$QBhash" ]
      >&2 echo 'No selected torrent'
      return 1
 fi
+local rawar=()
+if  [ "$1" == "-r" ]
+    then
+     rawar=('-r')
+     shift
+    else
+     rawar=()
+fi
 local selectfilter=""
-if [ "$1" == "--jselect" ]
+if [ "$1" == "--jqselect" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      selectfilter="|select$2"
@@ -1329,7 +1376,7 @@ if [ "$1" == "--jselect" ]
      shift
 fi
 local sortfilter=""
-if [ "$1" == "--jsort" ]
+if [ "$1" == "--jqsort" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      sortfilter="|sort_by$2"
@@ -1337,22 +1384,20 @@ if [ "$1" == "--jsort" ]
      shift
 fi
 local filter=""
-if [ "$1" == "--jformat" ]
+if [ "$1" == "--jq" ]
     then
      [ -z "$2" ] && { >&2 qbhelp -u qbtorcontent; return 127; }
      filter="$2"
      shift
      shift
     else
-filter='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
+     filter="$QBtorcontentjq"
 fi
 local arg2
 local globfilter='to_entries| sort_by(.value.name)|to_entries|.[]|{"alph_index":.key}+{"gen_index":.value.key}+.value.value'
-if [ -z "$1" ]
+local indexfilter=""
+if [ ! -z "$1" ]
     then
-     __META_qbrequest "torrents/files?hash=$QBhash" |
-     jq "[$globfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
-    else
      local arg1="$1"
      local arg2=""
      if [ -z $2 ]
@@ -1369,16 +1414,13 @@ if [ -z "$1" ]
          fi
          arg1="${arg1:1:$((${#arg1}-2))}"
          arg2="${arg2:1:$((${#arg2}-2))}"
-         indexfilter="select(.gen_index==$arg1 or (.gen_index>$arg1 and .gen_index<=$arg2))"
+         indexfilter="|select(.gen_index==$arg1 or (.gen_index>$arg1 and .gen_index<=$arg2))"
         else
-         indexfilter="select(.alph_index==$arg1 or (.alph_index>$arg1 and .alph_index<=$arg2))"
+         indexfilter="|select(.alph_index==$arg1 or (.alph_index>$arg1 and .alph_index<=$arg2))"
      fi
-     __META_qbrequest "torrents/files?hash=$QBhash" |
-     jq "[$globfilter|$indexfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
 fi
-return 0
+__META_qbrequest "torrents/files?hash=$QBhash" | jq "${rawar[@]}" "[$globfilter$indexfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
 }
-
 
 # qbtorcontentedit: Change the name of a file and the priorities of files of the selected torrent
 # Usage: qbtorcontentedit name NEW_NAME INDEX
@@ -1569,3 +1611,7 @@ __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
 unset exitcode
+QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
+QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'

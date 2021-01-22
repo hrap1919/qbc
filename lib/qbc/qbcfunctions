@@ -1177,7 +1177,7 @@ fi
 return 0
 }
 
-# qbtortrack: Trackers info of the selected torrent
+# qbtortrack: Trackers and web seeds info of the selected torrent
 # Usage: qbtortrack
 
 alias qbtortrack="__META_qbcall qbtortrack"
@@ -1191,6 +1191,7 @@ __META_qbrequest "torrents/trackers?hash=$QBhash" |
 jq '.[]|.url+" ("+
 (.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
 "), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)' 2>/dev/null
+__META_qbrequest "torrents/webseeds?hash=$QBhash" | jq '.[]|.url+" (web seed)"' 2>/dev/null
 fi
 }
 
@@ -1587,7 +1588,7 @@ return 0
 shopt -s expand_aliases
 HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"
-PROMPT_COMMAND='[ -z $QBcookie ] && exit 1; history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
+PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
 QBarg=()
 [ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
 [ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")

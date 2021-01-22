@@ -125,7 +125,9 @@ The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBitto
 
 List of torrents with a short info.
 
-Usage: qblist [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
+Usage: qblist [-r] [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
+
+Option -r: raw output
 
 Without options prints info of all torrents. The torrents are sorted by the addition time and indexed by numbers
 
@@ -142,11 +144,10 @@ E.g., the following command prints hashes and names of torrents which have the t
 ```console
 qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+.name'
 ```
-
-The default format of qblist is:
+The default format of qblist is defined in the variable
 
 ```console
-'(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+'QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 ```
 
 #### 10. qbdo

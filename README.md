@@ -283,10 +283,10 @@ Advanced option: --jq enables a possibility to define an own jq-format for outpu
 qbtorpeer --jqsort '(.progress)|reverse' --jq '.ip+":"+(.port|tostring)'
 ```
 
-The default format of qbtorcontent is:
+The default format of qbtorcontent is defined in the variable
 
 ```console
-qbtorpeer --jq '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 ```
 
 The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
@@ -325,10 +325,10 @@ Advanced option: --jq enables a possibility to define an own jq-format for outpu
 qbtorcontent --jqsort '(.gen_index)' --jq '"["+(.gen_index|tostring)+"] "+.name'
 ```
 
-The default format of qbtorcontent is:
+The default format of qbtorcontent is defined in the variable
 
 ```console
-'(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability\*100|trunc|tostring)+"% online"'
+QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
 ```
 
 #### 23. qbtorcontentedit

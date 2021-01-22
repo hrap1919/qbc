@@ -1186,13 +1186,13 @@ function __META_qbtortrack ()
 if [ -z "$QBhash" ]
 then
 >&2 echo 'No selected torrent'
-else
+return 1
+fi
 __META_qbrequest "torrents/trackers?hash=$QBhash" |
 jq '.[]|.url+" ("+
 (.status|if .==0 then "Disabled" else if .==1 then "Not contacted" else if .==2 then "Working" else if .==3 then "Updating" else "Not working" end end end end)+
 "), p:"+(.num_peers|tostring)+" s:"+(.num_seeds|tostring)+" l:"+(.num_leeches|tostring)' 2>/dev/null
 __META_qbrequest "torrents/webseeds?hash=$QBhash" | jq '.[]|.url+" (web seed)"' 2>/dev/null
-fi
 }
 
 # qbtortrackedit: Edit trackers of the selected torrent
@@ -1585,6 +1585,7 @@ return 0
 #The initialization
 ##########################################################################################
 
+trap '[ -z "$QBcookie" ] && exit' SIGINT
 shopt -s expand_aliases
 HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"

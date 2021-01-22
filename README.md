@@ -147,7 +147,7 @@ qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+
 The default format of qblist is defined in the variable
 
 ```console
-'QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 ```
 
 #### 10. qbdo
@@ -164,10 +164,19 @@ without "-i" the function does the action for the selected torrent (via qbselect
 
 Selects the torrent with the specified index from qblist
 
-Usage: qbselect [-s] [INDEX]
+Usage: qbselect [-s| [-r] [--jq FORMAT]] [INDEX]
 
 Option -s: silent mode
 
+Option -r: raw output
+
+Advanced option: --jq enables a possibility to define an own jq-format for output info on the selected torrent
+
+The deafult format is defined in the variable
+
+```console
+QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
+```
 #### 12. qbtordel
 
 Remove the selected torrent.

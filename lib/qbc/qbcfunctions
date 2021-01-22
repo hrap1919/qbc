@@ -731,8 +731,7 @@ return 0
 # qbselect: Option -r: raw output
 # qbselect: Advanced option: --jq enables a possibility to define an own jq-format for output info on the selected torrent
 # qbselect: The deafult format is defined in the variable
-# qbselect: QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
-
+# qbselect: QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
 
 alias qbselect="__META_qbcall qbselect"
 function __META_qbselect ()

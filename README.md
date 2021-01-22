@@ -125,7 +125,9 @@ The available ARGs are listed in WebUI API https://github.com/qbittorrent/qBitto
 
 List of torrents with a short info.
 
-Usage: qblist [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
+Usage: qblist [-r] [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
+
+Option -r: raw output
 
 Without options prints info of all torrents. The torrents are sorted by the addition time and indexed by numbers
 
@@ -142,11 +144,10 @@ E.g., the following command prints hashes and names of torrents which have the t
 ```console
 qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+.name'
 ```
-
-The default format of qblist is:
+The default format of qblist is defined in the variable
 
 ```console
-'(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 ```
 
 #### 10. qbdo
@@ -163,10 +164,19 @@ without "-i" the function does the action for the selected torrent (via qbselect
 
 Selects the torrent with the specified index from qblist
 
-Usage: qbselect [-s] [INDEX]
+Usage: qbselect [-s| [-r] [--jq FORMAT]] [INDEX]
 
 Option -s: silent mode
 
+Option -r: raw output
+
+Advanced option: --jq enables a possibility to define an own jq-format for output info on the selected torrent
+
+The deafult format is defined in the variable
+
+```console
+QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
+```
 #### 12. qbtordel
 
 Remove the selected torrent.
@@ -273,10 +283,10 @@ Advanced option: --jq enables a possibility to define an own jq-format for outpu
 qbtorpeer --jqsort '(.progress)|reverse' --jq '.ip+":"+(.port|tostring)'
 ```
 
-The default format of qbtorcontent is:
+The default format of qbtorcontent is defined in the variable
 
 ```console
-qbtorpeer --jq '(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
 ```
 
 The available fields: .client,.connection,.country,.country_code,.dl_speed,.downloaded,.files,.flags,.flags_desc,.ip,.port,.progress,.relevance,.up_speed,.uploaded
@@ -315,10 +325,10 @@ Advanced option: --jq enables a possibility to define an own jq-format for outpu
 qbtorcontent --jqsort '(.gen_index)' --jq '"["+(.gen_index|tostring)+"] "+.name'
 ```
 
-The default format of qbtorcontent is:
+The default format of qbtorcontent is defined in the variable
 
 ```console
-'(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability\*100|trunc|tostring)+"% online"'
+QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
 ```
 
 #### 23. qbtorcontentedit

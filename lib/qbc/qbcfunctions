@@ -786,7 +786,7 @@ fi
 
 # qbtordel: Remove the selected torrent.
 # Usage: qbtordel [-s] [-d]
-# qbtordel: Option "-s" is for a silent removing without an interactive confirmation. \
+# qbtordel: Option "-s" is for a silent removing without an interactive confirmation.
 # qbtordel: Option "-d" is for removing also the downloaded data
 
 alias qbtordel="__META_qbcall qbtordel"

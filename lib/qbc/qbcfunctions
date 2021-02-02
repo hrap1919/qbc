@@ -587,7 +587,7 @@ fi
 QBhash="$diff"
 echo "Torrent with hash="$QBhash" is added"
 jq -n --arg hash "$QBhash" --argjson jj "$newinfo" '$jj|.[]|select(.hash==$hash)|
-.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state' 2>/dev/null
+.name+", size: "+(.size /1048576|trunc|tostring)+"Mb"' 2>/dev/null
 }
 
 
@@ -606,7 +606,7 @@ jq -n --arg hash "$QBhash" --argjson jj "$newinfo" '$jj|.[]|select(.hash==$hash)
 # qblist: E.g., the following command prints hashes and names of torrents which have the tag "My tag":
 # qblist: qblist --jqselect '(.tags|split(", ")|.[]|select(.=="My tag"))' --jq '.hash+"/"+.name'
 # qblist: The default format of qblist is defined in the variable
-# qblist: 'QBlistjq=(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+# qblist: QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
 
 alias qblist="__META_qbcall qblist"
 function __META_qblist ()
@@ -667,9 +667,11 @@ return 0
 
 
 # qbdo: Pause, resume, recheck, reannounce and force start the torrents
-# Usage: qbdo (pause | resume | recheck | reannounce | setForceStart) [-i [INDEX_1] [INDEX_2]]
+# Usage: qbdo (pause | resume | recheck | reannounce | setForceStart) [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
 # qbdo: With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action
-# qbdo: without "-i" the function does the action for the selected torrent (via qbselect function)
+# qbdo: Advanced option: --jqselect for inserting the "select" jq-filter. For example:
+# qbdo: qbdo pause -i --jqselect '(.state=="downloading")'
+# qbdo: Without "-i" the function does the action for the selected torrent (see qbselect --help)
 alias qbdo="__META_qbcall qbdo"
 function __META_qbdo ()
 {
@@ -680,24 +682,45 @@ if [ -z "$1" ]
 fi
 local hashes=""
 local resp=""
-local agr4=""
+local arg4=""
+local indexfilter=""
+local selectfilter=""
+local extra=""
+[ "$1" == "setForceStart" ] && extra='&value=true'
+local command="$1"
 if [ "$2" == "-i" ]
     then
      if [ -z "$3" ]
         then
          hashes="all"
         else
-         if [ -z "$4" ]
+         if [ "$3" == "--jqselect" ]
             then
-             arg4="$3"
-            else
-             arg4="$4"
+             if [ -z "$4" ]
+                then
+                 >&2 qbhelp -u qbdo
+                 return 127
+             fi
+             selectfilter="|select$4"
+             shift
+             shift
          fi
-         hashes=$(__META_qbrequest 'torrents/info?sort=added_on'| jq -r '(.['"$3"'].hash)+([.['"$3"'+1:'"$arg4"'+1]|.[]|"|"+.hash]|add)' 2>/dev/null)
+         if [ ! -z "$3" ]
+            then
+             if [ -z "$4" ]
+                then
+                 arg4="$3"
+                else
+                 arg4="$4"
+             fi
+             indexfilter="|select(.index==$3 or (.index>$3 and .index<=$arg4))"
+         fi
+         hashes=$(__META_qbrequest 'torrents/info?sort=added_on'|
+         jq -r '[to_entries|.[]|{"index":.key}+.value'"$indexfilter$selectfilter"'|.hash]|if length==0 then "" else .[0]+([.[1:length]|.[]|"|"+.]|add) end' 2>/dev/null)
          if [ -z "$hashes" ]
             then
-             >&2 echo 'An error is occured'
-             return 1
+             >&2 echo 'Warning: No matched torrents'
+             return 0
          fi
      fi
     else
@@ -708,14 +731,7 @@ if [ "$2" == "-i" ]
      fi
      hashes="$QBhash"
 fi
-if [ -z "$1" ]
-    then
-     >&2 qbhelp -u qbtordo
-     return 127
-fi
-local extra=""
-[ "$1" == "setForceStart" ] && extra='&value=true'
-resp=$(__META_qbrequest -e "torrents/$1?hashes=$hashes$extra" 2>/dev/null)
+resp=$(__META_qbrequest -e "torrents/$command?hashes=$hashes$extra" 2>/dev/null)
 if [ "$resp" != "200" ]
     then
      >&2 echo 'An error is occured'
@@ -1338,10 +1354,10 @@ return 0
 
 # qbtorcontent: Alphabetically sorted list of the names and priorities of files of the selected torrent with a short info
 # Usage: qbtorcontent [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
-# qbtorcontent: Without option print info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
+# qbtorcontent: Without option print info of all files together with their alphabetical (0,1,2,...) and generic ([0],[1],[2]...) indices
 # qbtorcontent: The generic indices do not depend on renaming of files, they are shown in square brackets.
-# qbtorcontent: The alphabetical indices depend on the names, they may be more convenient than generic ones.
-# qbtorcontent: E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_INDEX) of file2 is [1], while it's alphabetical index (ALPH_INDEX) is 3.
+# qbtorcontent: The alphabetical indices depend on the names, but they may be more convenient than generic ones.
+# qbtorcontent: E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index of file2 is [1], while its alphabetical index is 3.
 # qbtorcontent: Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
 # qbtorcontent: Advanced options: --jqselect and --jqsort for inserting "select" and "sort_by" jq-filters
 # qbtorcontent: E.g., qbtorcontent --jqselect '(.priority==7)' --jqsort '(.progress)|reverse'

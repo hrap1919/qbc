@@ -667,7 +667,8 @@ return 0
 
 
 # qbdo: Pause, resume, recheck, reannounce and force start the torrents
-# Usage: qbdo (pause | resume | recheck | reannounce | setForceStart) [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
+# Usage: qbdo COMMAND [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
+# Usage:qbdo COMMAND=pause, resume, recheck, reannounce, setForceStart, increasePrio, decreasePrio, topPrio, bottomPrio
 # qbdo: With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action
 # qbdo: Advanced option: --jqselect for inserting the "select" jq-filter. For example:
 # qbdo: qbdo pause -i --jqselect '(.state=="downloading")'
@@ -896,7 +897,7 @@ if [ -z "$QBhash" ]
      >&2 echo 'No selected torrent'
      return 1
 fi
-local vars='{"save_path":.save_path,"name":.name,"category":.category,tags:.tags,"auto_tmm":.auto_tmm,"dl_limit_kbs":(.dl_limit|if .>0 then (./1024|trunc) else . end),"up_limit_kbs":(.up_limit|if .>0 then (./1024|trunc) else . end),"share_limit":{"ratio_limit":.ratio_limit,"seeding_time_limit":.seeding_time_limit},"super_seeding":.super_seeding,"media":{"seq_dl":.seq_dl,"f_l_piece_prio":.f_l_piece_prio},"priority":.priority}'
+local vars='{"save_path":.save_path,"name":.name,"category":.category,tags:.tags,"auto_tmm":.auto_tmm,"dl_limit_kbs":(.dl_limit|if .>0 then (./1024|trunc) else . end),"up_limit_kbs":(.up_limit|if .>0 then (./1024|trunc) else . end),"share_limit":{"ratio_limit":.ratio_limit,"seeding_time_limit":.seeding_time_limit},"super_seeding":.super_seeding,"media":{"seq_dl":.seq_dl,"f_l_piece_prio":.f_l_piece_prio}}'
 if [ "$1" == "-r" ]
     then
      if [ -z "$2" ] || [ $# -gt 2 ]
@@ -926,10 +927,10 @@ return 0
 
 
 # qbtormenuedit: Change an editable property of the selected torrent
-# Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued (not work for priority)
+# Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued
 # Usage:qbtormenuedit Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object
-# Usage:qbtormenuedit Usage: qbtormenuedit priority (top|increase|decrease|bottom)
-# Usage:qbtormenuedit Usage: qbtormenuedit PROPERTY [-d] ITEM # add or delete("-d") the ITEM from the array PROPERTY (tags)
+## Usage:qbtormenuedit Usage: qbtormenuedit priority (top|increase|decrease|bottom)
+# Usage:qbtormenuedit Usage: qbtormenuedit tags [-d] TAG # add or delete("-d") the TAG
 
 alias qbtormenuedit="__META_qbcall qbtormenuedit"
 function __META_qbtormenuedit ()
@@ -1008,9 +1009,9 @@ case "$1" in
          resp=$(__META_qbrequest -e "torrents/toggleFirstLastPiecePrio?hashes=$QBhash")
      fi
     ;;
-    priority)
-     resp=$(__META_qbrequest -e "torrents/${2}Prio?hashes=$QBhash")
-    ;;
+    #priority)
+    # resp=$(__META_qbrequest -e "torrents/${2}Prio?hashes=$QBhash")
+    #;;
     *)
      >&2 qbhelp -u qbtormenuedit
      return 127
@@ -1628,7 +1629,16 @@ __META_qblogin
 exitcode=$?
 [ "$exitcode" == "0" ] || builtin exit "$exitcode"
 unset exitcode
-QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
-QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
-QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
-QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'
+if [ -z "$QBlistjq" ]
+    then
+     if [ $(qbpref -r queueing_enabled) == "true" ]
+        then
+         QBlistjq='(.index|tostring)+". <"+(.priority|tostring)+"> "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+        else
+         QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
+     fi
+     [ $(qbpref -r queueing_enabled) == "true" ] && QBlistjq="$QBlistjq"'+", priority:"+(.priority|tostring)'
+fi
+[ -z "$QBselectjq" ] && QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
+[ -z "$QBtorpeerjq" ] && QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
+[ -z "$QBtorcontentjq" ] && QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <prio:"+(.priority|tostring)+">, "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+(.availability*100|trunc|tostring)+"% online"'

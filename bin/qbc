@@ -6,7 +6,7 @@ if [ ! -f "$BASH_ENV" ]
       >&2 echo 'The program is not installed'
       exit 1
 fi
-export QB_version="1.0 Beta"
+export QB_version="1.1 Beta"
 #Usage: qbc ([-k | -c CERTFILE]) [-l USERNAME] [-p PASSWORD] URL <bash options>
 { [ "$1" == "-h" ] || [ "$1" == "--help" ]; } && { echo 'A qBittorent WebUI bash client'; echo; echo 'Usage: qbc [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...'; exit 0; }
 { [ "$1" == "-v" ] || [ "$1" == "--version" ]; } && { echo "$QB_version" ; exit 0; }

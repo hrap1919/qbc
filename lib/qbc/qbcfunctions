@@ -666,7 +666,7 @@ return 0
 }
 
 
-# qbdo: Pause, resume, recheck, reannounce and force start the torrents
+# qbdo: Pause, resume, recheck, reannounce, force start and priority change of the torrents
 # Usage: qbdo COMMAND [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
 # Usage:qbdo COMMAND=pause, resume, recheck, reannounce, setForceStart, increasePrio, decreasePrio, topPrio, bottomPrio
 # qbdo: With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action

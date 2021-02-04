@@ -152,13 +152,22 @@ QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of
 
 #### 10. qbdo
 
-Pause, resume, recheck, reannounce and force start the torrents
+Pause, resume, recheck, reannounce, force start and priority change of the torrents
 
-Usage: qbdo (pause | resume | recheck | reannounce | setForceStart) [-i [INDEX_1] [INDEX_2]]
+Usage: qbdo COMMAND [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
+
+COMMAND=pause, resume, recheck, reannounce, setForceStart, increasePrio, decreasePrio, topPrio, bottomPrio
 
 With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action
 
-without "-i" the function does the action for the selected torrent (via qbselect function)
+Advanced option: --jqselect for inserting the "select" jq-filter. For example:
+
+```console
+qbdo pause -i --jqselect '(.state=="downloading")'
+```
+
+Without "-i" the function does the action for the selected torrent (see qbselect --help)
+
 
 #### 11. qbselect
 
@@ -203,13 +212,11 @@ The option "-r" is for the raw output of a property
 
 Change an editable property of the selected torrent
 
-Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued (not work for priority)
+Usage: qbtormenuedit PROPERTY VALUE # if the PROPERTY is a single-valued
 
 Usage: qbtormenuedit PROPERTY VALUE_1 VALUE_2 ... # if the PROPERTY is a multi-valued object
 
-Usage: qbtormenuedit priority (top|increase|decrease|bottom)
-
-Usage: qbtormenuedit PROPERTY [-d] ITEM # add or delete("-d") the ITEM from the array PROPERTY (tags)
+Usage: qbtormenuedit tags [-d] TAG # add or delete("-d") the TAG
 
 #### 16. qbtorblock
 

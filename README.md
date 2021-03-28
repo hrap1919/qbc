@@ -316,7 +316,7 @@ The generic indices do not depend on renaming of files, they are shown in square
 
 The alphabetical indices depend on the names, they may be more convenient than generic ones.
 
-E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index (GEN_INDEX) of file2 is [1], while it's alphabetical index (ALPH_INDEX) is 3.
+E.g., the record "3[1]. /Folder/file2 ..."  means that the generic index of file2 is [1], while it's alphabetical index is 3.
 
 Arguments INDEX_1 and INDEX_2 are either alphabetical (without brackets), or generic (in square brackets) indices of the same type. They determine an interval of files to be shown
 

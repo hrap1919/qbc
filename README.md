@@ -1,7 +1,7 @@
 # qbc - qBittorrent Bash Client
 A simple qBittorrent remote command-line client based on the bash, curl and jq binaries for a Linux-compatible environment (including Cygwin and Termux). It uses the last WebUI API https://github.com/qbittorrent/qBittorrent/wiki/WebUI-API-(qBittorrent-4.1)
 
-The file bin/qbcient is a bash-script which invokes a bash-subshell after an authorization to the server. Usage:
+The file bin/qbc is a bash-script which invokes a bash-subshell after an authorization to the server. Usage:
 
 ```console
 qbc [(-k | -c CERTFILE)] [-l USERNAME] [-p PASSWORD] URL [BASH_OPT1] [BASH_OPT2] ...
@@ -21,7 +21,7 @@ It is very convenient to use ssh- or mosh-access with the qbc installed on the q
 ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" <filename.torrent
 ```
 
-(or) cat console filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" 
+(or) cat filename.torrent | ssh user@host qbc -p "'adminadmin'" "'http://localhost:8080'" -c "'qbadd -f -'" 
 
 Any bug reports, improvements, forks, alternative shell function systems are welcome.
 
@@ -310,7 +310,7 @@ Alphabetically sorted list of the names and priorities of files of the selected 
 
 Usage: qbtorcontent [--jqselect FILTER] [--jqsort FILTER] [--jq FORMAT] [INDEX_1] [INDEX_2]
 
-Without option prints info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...)
+Without option prints info of all files with alphabetical (0,1,2,...) and generic ([0],[1],[2]...) indices.
 
 The generic indices do not depend on renaming of files, they are shown in square brackets.
 

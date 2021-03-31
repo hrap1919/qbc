@@ -1441,11 +1441,10 @@ __META_qbrequest "torrents/files?hash=$QBhash" | jq "${rawar[@]}" "[$globfilter$
 
 # qbtorcontentedit: Change the name of a file and the priorities of files of the selected torrent
 # Usage: qbtorcontentedit name NEW_NAME INDEX
-# qbtorcontentedit: If the INDEX is alphatical (no brackets) then the function prints the generic index of the renamed file
-# qbtorcontentedit: If the INDEX is generic then function prints nothing to stdout
+# Usage:qbtorcontentedit Usage: qbtorcontentedit dirname NEW_PATH OLD_PATH
 # Usage:qbtorcontentedit Usage: qbtorcontentedit prio NEW_PRIORITY [INDEX_1] [INDEX_2]
-# qbtorcontentedit: Without arguments  INDEX_1 and INDEX_2 the function does a global change of file priorities
-# qbtorcontentedit: With arguments INDEX_1 INDEX_2 the function sets a new priority to the files in the specified interval, the same as in qbcontent 
+# qbtorcontentedit: qbtorcontentedit prio without arguments  INDEX_1 and INDEX_2 does a global change of file priorities
+# qbtorcontentedit: qbtorcontentedit prio with arguments INDEX_1 INDEX_2 sets a new priority to the files in the specified interval, the same as in qbcontent
 # qbtorcontentedit: See "qbcontent --help" for a more info on generic and alphabetical indices
 
 alias qbtorcontentedit="__META_qbcall qbtorcontentedit"
@@ -1494,6 +1493,19 @@ case "$1" in
      fi
      echo "File [$gen] was renamed"
      return 0
+    ;;
+    dirname)
+     resp=$(echo "$2"|jq -rR '@uri')
+     oldname=$(echo "$3"|jq -rR '@uri')
+     resp=$(__META_qbrequest -e "torrents/renameFolder?hash=$QBhash&oldPath=$oldname&newPath=$resp" 2>/dev/null)
+     if [ "$resp" != "200" ]
+        then
+         >&2 echo 'An error is occured'
+         return 1
+     fi
+     echo "The folder was renamed"
+     return 0
+
     ;;
     prio)
      local index=""

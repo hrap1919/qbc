@@ -340,19 +340,17 @@ QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <
 
 #### 23. qbtorcontentedit
 
-Change the name of a file and the priorities of files of the selected torrent
+Change the filenames and the priorities of files of the selected torrent
 
 Usage: qbtorcontentedit name NEW_NAME INDEX
 
-If the INDEX is alphatical (no brackets) then the function prints the generic index of the renamed file
-
-If the INDEX is generic then function prints nothing to stdout
+Usage: qbtorcontentedit dirname NEW_PATH OLD_PATH
 
 Usage: qbtorcontentedit prio NEW_PRIORITY [INDEX_1] [INDEX_2]
 
-Without arguments  INDEX_1 and INDEX_2 the function does a global change of file priorities
+qbtorcontentedit prio without arguments  INDEX_1 and INDEX_2 does a global change of file priorities
 
-With arguments INDEX_1 INDEX_2 the function sets a new priority to the files in the specified interval, the same as in qbcontent
+qbtorcontentedit prio with arguments INDEX_1 INDEX_2 sets a new priority to the files in the specified interval, the same as in qbcontent
 
 See "qbcontent --help" for a more info on generic and alphabetical indices
 

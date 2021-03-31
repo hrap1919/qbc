@@ -19,7 +19,7 @@ if [ "$1" == "-k" ]
      if [ "$1" == "-c" ]
         then
          QB_arg1="--cacert"
-         QB_arg2="$2"
+         QB_arg2=$(realpath "$2")
          shift
          shift
         else

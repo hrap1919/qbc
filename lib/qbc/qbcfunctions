@@ -1463,30 +1463,36 @@ return 127
 fi
 local gen=""
 local resp=""
+local oldname=""
 local index=""
 case "$1" in
     name)
+     resp=$(__META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null)
      if [ "${3:0:1}" == "[" ]
         then
          [ "${3:$((${#3}-1)):1}" == "]" ] || {>&2 qbhelp -u qbtorcontentedit; return 127; }
          index="${3:1:$((${#3}-2))}"
-        else
-         index=$(__META_qbtorfile "$3" -r gen_index 2>/dev/null)
+         oldname=$(echo "$resp"| jq -r '.['"$index"'].name|@uri' 2>/dev/null)
          gen="$index"
+        else
+         index="$3"
+         resp=$(echo "$resp"| jq 'to_entries|sort_by(.value.name)|.['"$index"']|{"gen_index":.key,"name":.value.name}' 2>/dev/null)
+         oldname=$(echo "$resp"| jq -r '.name|@uri' 2>/dev/null)
+         gen=$(echo "$resp"| jq -r '.gen_index' 2>/dev/null)
      fi
-     if [ -z "$index" ]
+     if [ -z "$oldname" ]
         then
          >&2 echo 'An error is occured'
          return 1
      fi
      resp=$(echo "$2"|jq -rR '@uri')
-     resp=$(__META_qbrequest -e "torrents/renameFile?hash=$QBhash&id=$index&name=$resp" 2>/dev/null)
+     resp=$(__META_qbrequest -e "torrents/renameFile?hash=$QBhash&oldPath=$oldname&newPath=$resp" 2>/dev/null)
      if [ "$resp" != "200" ]
         then
          >&2 echo 'An error is occured'
          return 1
      fi
-     [ -z "$gen" ] || echo "[$gen]"
+     echo "File [$gen] was renamed"
      return 0
     ;;
     prio)
@@ -1608,7 +1614,7 @@ HISTCONTROL="ignoreboth:erasedups"
 PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
 QBarg=()
 [ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
-[ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")
+[ -z "$QB_arg2" ] || QBarg+=($(realpath "$QB_arg2"))
 unset QB_arg1
 unset QB_arg2
 QBlogin=$(echo "$QB_login" | jq  -rR @uri)

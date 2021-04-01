@@ -340,19 +340,29 @@ QBtorcontentjq='(.alph_index|tostring)+"["+(.gen_index|tostring)+"]. "+.name+" <
 
 #### 23. qbtorcontentedit
 
-Change the filenames and the priorities of files of the selected torrent
+Change the names and priorities of files of the selected torrent
 
-Usage: qbtorcontentedit name NEW_NAME INDEX
+Usage: qbtorcontentedit filename NEW_NAME INDEX [OFFSET]
 
-Usage: qbtorcontentedit dirname NEW_PATH OLD_PATH
+rename the file with INDEX
+
+OFFSET is the number of directory levels up for the new name of the file (default=1)
+
+Usage: qbtorcontentedit dirname NEW_NAME [INDEX] [DIR_INDEX] [OFFSET]
+
+rename a directory in the path of the file with INDEX
+
+DIR_INDEX is the number of directory levels from the file to the targeted directory (default=1)
+
+OFFSET is the number of directory levels up for the new name of the directory (default=1)
 
 Usage: qbtorcontentedit prio NEW_PRIORITY [INDEX_1] [INDEX_2]
 
-qbtorcontentedit prio without arguments  INDEX_1 and INDEX_2 does a global change of file priorities
+qbtorcontentedit prio without arguments INDEX_1 and INDEX_2 does a global change of file priorities
 
 qbtorcontentedit prio with arguments INDEX_1 INDEX_2 sets a new priority to the files in the specified interval, the same as in qbcontent
 
-See "qbcontent --help" for a more info on generic and alphabetical indices
+See "qbcontent --help" for more info on generic and alphabetical indices
 
 #### 24. qbtorfile
 

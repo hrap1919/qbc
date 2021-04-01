@@ -1439,13 +1439,18 @@ fi
 __META_qbrequest "torrents/files?hash=$QBhash" | jq "${rawar[@]}" "[$globfilter$indexfilter$selectfilter]$sortfilter|.[]|$filter" 2>/dev/null
 }
 
-# qbtorcontentedit: Change the name of a file and the priorities of files of the selected torrent
-# Usage: qbtorcontentedit basename NEW_NAME INDEX
-# Usage:qbtorcontentedit Usage: qbtorcontentedit dirname NEW_PATH OLD_PATH
+# qbtorcontentedit: Change the names and priorities of files of the selected torrent
+# Usage: qbtorcontentedit filename NEW_NAME INDEX [OFFSET]
+# qbtorcontentedit: rename the file with INDEX
+# qbtorcontentedit: OFFSET is the number of directory levels up for the new name of the file (default=1)
+# Usage:qbtorcontentedit Usage: qbtorcontentedit dirname NEW_NAME [INDEX] [DIR_INDEX] [OFFSET]
+# qbtorcontentedit: rename a directory in the path of the file with INDEX
+# qbtorcontentedit: DIR_INDEX is the number of directory levels from the file to the targeted directory (default=1)
+# qbtorcontentedit: OFFSET is the number of directory levels up for the new name of the directory (default=1)
 # Usage:qbtorcontentedit Usage: qbtorcontentedit prio NEW_PRIORITY [INDEX_1] [INDEX_2]
-# qbtorcontentedit: qbtorcontentedit prio without arguments  INDEX_1 and INDEX_2 does a global change of file priorities
+# qbtorcontentedit: qbtorcontentedit prio without arguments INDEX_1 and INDEX_2 does a global change of file priorities
 # qbtorcontentedit: qbtorcontentedit prio with arguments INDEX_1 INDEX_2 sets a new priority to the files in the specified interval, the same as in qbcontent
-# qbtorcontentedit: See "qbcontent --help" for a more info on generic and alphabetical indices
+# qbtorcontentedit: See "qbcontent --help" for more info on generic and alphabetical indices
 
 alias qbtorcontentedit="__META_qbcall qbtorcontentedit"
 function __META_qbtorcontentedit ()
@@ -1455,13 +1460,15 @@ if [ -z "$QBhash" ]
      >&2 echo 'No selected torrent'
      return 1
 fi
+local level="1"
+local dirlevel="1"
 local gen=""
 local resp=""
 local oldname=""
 local path=""
 local index=""
 case "$1" in
-    basename)
+    filename)
      if [ "$#" -lt 3 ]
         then
          >&2 qbhelp -u qbtorcontentedit
@@ -1486,12 +1493,23 @@ case "$1" in
          return 1
      fi
      resp=$(echo "$2"|jq -rR '@uri')
-     path=$(dirname "$oldname"| jq -rR '@uri')
+     [ -n "$4" ] && [ "$4" -gt "1" ] && level="$4" 2>/dev/null
+     path="$oldname"
+     while [ "$level" -ge  "1" ]
+        do
+         if [ "$path" == "." ]
+            then
+             >&2 echo 'An error is occured'
+             return 1
+         fi
+         path=$(dirname "$path")
+         level=$((level-1))
+        done
      if [ "$path" == "." ]
         then
          path=""
         else
-         path="$path%2F"
+         path=$(echo "$path/"| jq -rR '@uri')
      fi
      oldname=$(echo "$oldname"| jq -rR '@uri')
      resp=$(__META_qbrequest -e "torrents/renameFile?hash=$QBhash&oldPath=$oldname&newPath=$path$resp" 2>/dev/null)
@@ -1509,32 +1527,68 @@ case "$1" in
          >&2 qbhelp -u qbtorcontentedit
          return 127
      fi
+     resp=$(__META_qbrequest "torrents/files?hash=$QBhash" 2>/dev/null)
+     if [ "${3:0:1}" == "[" ]
+        then
+         [ "${3:$((${#3}-1)):1}" == "]" ] || {>&2 qbhelp -u qbtorcontentedit; return 127; }
+         index="${3:1:$((${#3}-2))}"
+         oldname=$(echo "$resp"| jq -r '.['"$index"'].name' 2>/dev/null)
+        else
+         index="$3"
+         oldname=$(echo "$resp"| jq -r 'to_entries|sort_by(.value.name)|.['"$index"']|.value.name' 2>/dev/null)
+     fi
+     if [ -z "$oldname" ]
+        then
+         >&2 echo 'An error is occured'
+         return 1
+     fi
      resp=$(echo "$2"|jq -rR '@uri')
-     path=$(dirname "$3"| jq -rR '@uri')
-      if [ "$path" == "." ]
+     [ -n "$4" ] && [ "$4" -gt "1" ] && dirlevel="$4" 2>/dev/null
+     while [ "$dirlevel" -ge  "1" ]
+        do
+         if [ "$oldname" == "." ]
+            then
+             >&2 echo 'An error is occured'
+             return 1
+         fi
+         oldname=$(dirname "$oldname")
+         dirlevel=$((dirlevel-1))
+        done
+     path="$oldname"
+     [ -n "$5" ] && [ "$5" -gt "1" ] && level="$5" 2>/dev/null
+     while [ "$level" -ge  "1" ]
+        do
+         if [ "$path" == "." ]
+            then
+             >&2 echo 'An error is occured'
+             return 1
+         fi
+         path=$(dirname "$path")
+         level=$((level-1))
+        done
+     if [ "$path" == "." ]
         then
          path=""
         else
-         path="$path%2F"
+         path=$(echo "$path/"| jq -rR '@uri')
      fi
-     oldname=$(echo "$3"|jq -rR '@uri')
+     oldname=$(echo "$oldname"| jq -rR '@uri')
      resp=$(__META_qbrequest -e "torrents/renameFolder?hash=$QBhash&oldPath=$oldname&newPath=$path$resp" 2>/dev/null)
      if [ "$resp" != "200" ]
         then
          >&2 echo 'An error is occured'
          return 1
      fi
-     echo "The folder was renamed"
+     echo "Folder was renamed"
      return 0
-
-    ;;
+     ;;
     prio)
      if [ "$#" -lt 2 ]
         then
          >&2 qbhelp -u qbtorcontentedit
          return 127
      fi
-     local index=""
+     index=""
      local arg3="$3"
      local arg4=""
      if [ -z "$3" ]
@@ -1570,6 +1624,7 @@ case "$1" in
      resp=$(__META_qbrequest -e "torrents/filePrio?hash=$QBhash&id=$index&priority=$2" 2>/dev/null)
      if [ "$resp" == "200" ]
         then
+         echo "Then new priority was sent"
          return 0
         else
          #TODO: add the exitcodes 400, 404,409

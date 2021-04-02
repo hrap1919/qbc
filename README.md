@@ -35,7 +35,7 @@ curl 7.73.0
 
 jq 1.6
 
-qBittorrent 4.3.1
+qBittorrent 4.3.4.1 (WebUI API 2.8.1)
 
 ### Available functions:
 

@@ -1624,7 +1624,7 @@ case "$1" in
      resp=$(__META_qbrequest -e "torrents/filePrio?hash=$QBhash&id=$index&priority=$2" 2>/dev/null)
      if [ "$resp" == "200" ]
         then
-         echo "Then new priority was sent"
+         echo "New priority was sent"
          return 0
         else
          #TODO: add the exitcodes 400, 404,409

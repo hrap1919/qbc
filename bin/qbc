@@ -1,5 +1,5 @@
 #!/bin/bash
-export QB_version="1.3 Beta"
+export QB_version="1.4"
 export BASH_ENV=$(dirname $(realpath "$0"))"/../lib/qbc/qbcfunctions"
 if [ ! -f "$BASH_ENV" ]
     then

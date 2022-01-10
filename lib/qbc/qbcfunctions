@@ -576,8 +576,14 @@ local newinfo=$(__META_qbrequest 'torrents/info?sort=added_on' 2>/dev/null)
 local diff=$(jq -rn --argjson j "$oldinfo" --argjson jj "$newinfo" '([$jj|.[]|.hash])-([$j|.[]|.hash])|if (.|length)==1 then (.[0]) else . end' 2>/dev/null)
 if [ "$diff" == '[]' ]
     then
-      >&2 echo 'Warning: No new torrent is added'
-     return 0
+     sleep 1
+     newinfo=$(__META_qbrequest 'torrents/info?sort=added_on' 2>/dev/null)
+     diff=$(jq -rn --argjson j "$oldinfo" --argjson jj "$newinfo" '([$jj|.[]|.hash])-([$j|.[]|.hash])|if (.|length)==1 then (.[0]) else . end' 2>/dev/null)
+     if [ "$diff" == '[]' ]
+        then
+         >&2 echo 'Warning: No new torrent is added'
+         return 0
+     fi
 fi
 if [ "${diff:0:1}" == '[' ]
     then
@@ -667,12 +673,12 @@ return 0
 
 
 # qbdo: Pause, resume, recheck, reannounce, force start and priority change of the torrents
-# Usage: qbdo COMMAND [-i [--jqselect FILTER] [INDEX_1] [INDEX_2]]
+# Usage: qbdo COMMAND [--jqselect FILTER] [INDEX_1] [INDEX_2]
 # Usage:qbdo COMMAND=pause, resume, recheck, reannounce, setForceStart, increasePrio, decreasePrio, topPrio, bottomPrio
-# qbdo: With the option "-i" the function does the action for the torrents within the qblist index interval, "-i" without INDEX_1 and INDEX_2 does the global action
+# qbdo: With the option "-a" the function does the global action, otherwise it does the action index interval
 # qbdo: Advanced option: --jqselect for inserting the "select" jq-filter. For example:
-# qbdo: qbdo pause -i --jqselect '(.state=="downloading")'
-# qbdo: Without "-i" the function does the action for the selected torrent (see qbselect --help)
+# qbdo: qbdo pause --jqselect '(.state=="downloading")'
+# qbdo: Without third argument the function does the action for the selected torrent (see qbselect --help)
 alias qbdo="__META_qbcall qbdo"
 function __META_qbdo ()
 {
@@ -683,38 +689,45 @@ if [ -z "$1" ]
 fi
 local hashes=""
 local resp=""
-local arg4=""
+local arg3=""
 local indexfilter=""
 local selectfilter=""
 local extra=""
 [ "$1" == "setForceStart" ] && extra='&value=true'
 local command="$1"
-if [ "$2" == "-i" ]
+if [ -z "$2" ]
     then
-     if [ -z "$3" ]
+     if [ -z "$QBhash" ]
+         then
+          >&2 echo 'No selected torrent'
+          return 1
+     fi
+     hashes="$QBhash"
+    else
+     if [ "$2" == "-a" ]
         then
          hashes="all"
         else
-         if [ "$3" == "--jqselect" ]
+         if [ "$2" == "--jqselect" ]
             then
-             if [ -z "$4" ]
+             if [ -z "$3" ]
                 then
                  >&2 qbhelp -u qbdo
                  return 127
              fi
-             selectfilter="|select$4"
+             selectfilter="|select$3"
              shift
              shift
          fi
-         if [ ! -z "$3" ]
+         if [ ! -z "$2" ]
             then
-             if [ -z "$4" ]
+             if [ -z "$3" ]
                 then
-                 arg4="$3"
+                 arg3="$2"
                 else
-                 arg4="$4"
+                 arg3="$3"
              fi
-             indexfilter="|select(.index==$3 or (.index>$3 and .index<=$arg4))"
+             indexfilter="|select(.index==$2 or (.index>$2 and .index<=$arg3))"
          fi
          hashes=$(__META_qbrequest 'torrents/info?sort=added_on'|
          jq -r '[to_entries|.[]|{"index":.key}+.value'"$indexfilter$selectfilter"'|.hash]|if length==0 then "" else .[0]+([.[1:length]|.[]|"|"+.]|add) end' 2>/dev/null)
@@ -724,13 +737,6 @@ if [ "$2" == "-i" ]
              return 0
          fi
      fi
-    else
-     if [ -z "$QBhash" ]
-        then
-         >&2 echo 'No selected torrent'
-         return 1
-     fi
-     hashes="$QBhash"
 fi
 resp=$(__META_qbrequest -e "torrents/$command?hashes=$hashes$extra" 2>/dev/null)
 if [ "$resp" != "200" ]

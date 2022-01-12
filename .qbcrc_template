@@ -14,7 +14,7 @@ case "$QBurlshort" in
      # QBarg=()
      # Point a specific history file
      # HISTFILE="$HOME/.qbc_history"
-     # Any other presets and defined fuunctions
+     # Any other presets and defined functions
      ;;
     server2)
      # The real URL for server2
@@ -25,7 +25,7 @@ case "$QBurlshort" in
      QBpassword='password'
      # Insecure https:
      QBarg=("-k")
-     # Any other presets and defined fuunctions
+     # Any other presets and defined functions
      ;;
     server3)
      # The real URL for server3
@@ -36,7 +36,7 @@ case "$QBurlshort" in
      QBpassword='nY68j6yTp'
      # https with a self-signed certificate:
      QBarg=('--cacert' '/path/to/the/certificate/file.crt')
-     # Any other pre-sets and defined fuunctions
+     # Any other pre-sets and defined functions
      ;;
 esac
 # Common presets and defined functions

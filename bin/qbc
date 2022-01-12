@@ -34,7 +34,7 @@ if [ "$1" == "-l" ]
      shift
      shift
     else
-     QB_login="admin"
+     QB_login=""
 fi
 export QB_login
 if [ "$1" == "-p" ]

@@ -260,7 +260,7 @@ return 0
 # qbprefedit: Send new values of specified preference properties
 # Usage: qbprefedit [-s] [-n] PREF_PROPERTY_1 NEW_VALUE_1 [PREF_PROPERTY_2 NEW_VALUE_2 ...]
 # qbprefedit: The option -n prevents an additional check the values from the server after the request. The option "-s" forces "-n" and also prevents any output or user confirmations except (may be) error messages
-# qbprefedit: To change the WebUI password by a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
+# qbprefedit: To change the WebUI password in a secure way (from stdin) just omit the NEW_VALUE_1 argument in "qbprefedit web_ui_password". A change of web_ui_password property together with another options is not supported.
 
 alias qbprefedit="__META_qbcall qbprefedit"
 function __META_qbprefedit ()
@@ -1712,23 +1712,27 @@ HISTFILE="$HOME/.qbc_history"
 HISTCONTROL="ignoreboth:erasedups"
 PROMPT_COMMAND='history -n; history -w; history -c; history -r; PS1=\$QBurlshort"/"\${QBhash:0:5}"> "'
 QBarg=()
-[ -z "$QB_arg1" ] || QBarg+=("$QB_arg1")
-[ -z "$QB_arg2" ] || QBarg+=($(realpath "$QB_arg2"))
-unset QB_arg1
-unset QB_arg2
-QBlogin=$(echo "$QB_login" | jq  -rR @uri)
-unset QB_login
-QBpassword="$QB_password"
-unset QB_password
+QBlogin="admin"
+QBpassword=""
 QBurlshort="$QB_url"
-QBurl=""
+QBurl="$QB_url"
 unset QB_url
 QBversion="$QB_version"
 unset QB_version
 QBhelpfile="$BASH_ENV"
 unset BASH_ENV
+
 [ -f "$HOME/.qbcrc" ] && . "$HOME/.qbcrc"
-[ -z "$QBurl" ] && QBurl="$QBurlshort"
+[ -z "$QB_arg1" ] || QBarg=("$QB_arg1")
+[ -z "$QB_arg2" ] || QBarg+=("$QB_arg2")
+unset QB_arg1
+unset QB_arg2
+[ -z "$QB_login" ] || QBlogin="$QB_login"
+unset QB_login
+[ -z "$QB_password" ] || QBpassword="$QB_password"
+unset QB_password
+
+QBlogin=$(echo "$QBlogin" | jq  -rR @uri)
 QBpassword=$(echo "$QBpassword" | jq  -rR @uri)
 __META_qblogin
 exitcode=$?

@@ -1746,7 +1746,6 @@ if [ -z "$QBlistjq" ]
         else
          QBlistjq='(.index|tostring)+". "+.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, state:"+.state'
      fi
-     [ $(qbpref -r queueing_enabled) == "true" ] && QBlistjq="$QBlistjq"'+", priority:"+(.priority|tostring)'
 fi
 [ -z "$QBselectjq" ] && QBselectjq='.name+", "+(.progress*100|trunc|tostring)+"% of "+(.size /1048576|trunc|tostring)+"Mb, "+.state+", "+(.dlspeed/1024|trunc|tostring)+" Kb/s"'
 [ -z "$QBtorpeerjq" ] && QBtorpeerjq='(.progress*100 | trunc | tostring)+"% "+.ip+" "+.country_code+" "+(.dl_speed /1024 |trunc|tostring)+"Kb/s "+.client+"("+.connection+")"'
